@@ -1,0 +1,24 @@
+import * as React from "react";
+
+import { cn } from "@/shared/lib/utils";
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "flex h-11 w-full rounded-lg border border-transparent bg-secondary px-3.5 py-2 text-sm text-foreground shadow-none transition-colors",
+        "placeholder:text-muted-foreground",
+        "focus-visible:border-ring/40 focus-visible:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        "file:border-0 file:bg-transparent file:text-sm file:font-medium",
+        "aria-invalid:border-destructive/50 aria-invalid:ring-destructive/20",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input };
