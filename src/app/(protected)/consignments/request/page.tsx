@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FileText, Plus } from "lucide-react";
 
+import { requirePermission } from "@/shared/auth/require-permission";
 import { EmptyState } from "@/shared/components/empty-state";
 import { PageHeader } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   title: "Consignment Request",
 };
 
-export default function ConsignmentRequestPage() {
+export default async function ConsignmentRequestPage() {
+  await requirePermission("consignments.view");
+
   return (
     <>
       <PageHeader

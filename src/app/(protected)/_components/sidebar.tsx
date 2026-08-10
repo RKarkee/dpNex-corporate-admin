@@ -2,7 +2,7 @@
 
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
-import { useAuthStore } from "@/shared/auth/auth-store";
+import { useSession } from "@/shared/auth/session-context";
 import { Button } from "@/shared/components/ui/button";
 import {
   Sheet,
@@ -10,7 +10,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/shared/components/ui/sheet";
-import { filterNavByRole, sidebarNav } from "@/shared/config/navigation";
+import { filterNavByPermission, sidebarNav } from "@/shared/config/navigation";
 import { cn } from "@/shared/lib/utils";
 
 import { useSidebarStore } from "../_store/sidebar-store";
@@ -24,9 +24,9 @@ import { SidebarNav } from "./sidebar-nav";
 export function Sidebar() {
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggleCollapsed = useSidebarStore((s) => s.toggleCollapsed);
-  const role = useAuthStore((s) => s.user?.role);
+  const user = useSession();
 
-  const items = filterNavByRole(sidebarNav, role);
+  const items = filterNavByPermission(sidebarNav, user);
 
   return (
     <aside
@@ -91,9 +91,9 @@ export function Sidebar() {
 export function MobileSidebar() {
   const mobileOpen = useSidebarStore((s) => s.mobileOpen);
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen);
-  const role = useAuthStore((s) => s.user?.role);
+  const user = useSession();
 
-  const items = filterNavByRole(sidebarNav, role);
+  const items = filterNavByPermission(sidebarNav, user);
 
   return (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

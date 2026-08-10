@@ -1,9 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 
-import { useAuthStore } from "@/shared/auth/auth-store";
+import { useSession } from "@/shared/auth/session-context";
+import { displayName } from "@/shared/auth/types";
 import {
   Avatar,
   AvatarFallback,
@@ -18,19 +20,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { routes } from "@/shared/config/site";
 import { getInitials } from "@/shared/lib/utils";
 
 export function UserMenu() {
-  const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient();
+  const user = useSession();
+  const [signingOut, setSigningOut] = React.useState(false);
 
-  const displayName = user?.name ?? "User";
+  const name = displayName(user);
+  const avatarUrl = user.image_thumbnail ?? user.image ?? undefined;
 
-  function handleLogout() {
-    logout();
-    router.replace(routes.login);
+  async function handleLogout() {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // A hard reload still lands on /login, where the layout's check takes over.
+    }
+
+    // Otherwise the next user on this machine sees the previous one's cached lists.
+    queryClient.clear();
+    window.location.assign("/login");
   }
 
   return (
@@ -42,13 +52,13 @@ export function UserMenu() {
             className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:pr-3"
           >
             <Avatar className="size-8">
-              {user?.avatarUrl ? (
-                <AvatarImage src={user.avatarUrl} alt={displayName} />
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={name} />
               ) : null}
-              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+              <AvatarFallback>{getInitials(name)}</AvatarFallback>
             </Avatar>
             <span className="hidden font-medium text-foreground sm:inline">
-              {displayName}
+              {name}
             </span>
           </button>
         </DropdownMenuTrigger>
@@ -57,10 +67,10 @@ export function UserMenu() {
           <DropdownMenuLabel>Signed in</DropdownMenuLabel>
           <div className="px-2.5 pb-2">
             <p className="truncate text-sm font-semibold text-foreground">
-              {displayName}
+              {name}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {user?.email ?? "—"}
+              {user.email}
             </p>
           </div>
           <DropdownMenuSeparator />
@@ -73,9 +83,13 @@ export function UserMenu() {
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={signingOut}
+            onSelect={handleLogout}
+          >
             <LogOut />
-            Log out
+            {signingOut ? "Signing out…" : "Log out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -83,10 +97,11 @@ export function UserMenu() {
       <Button
         variant="outline"
         onClick={handleLogout}
+        disabled={signingOut}
         className="hidden sm:inline-flex"
       >
         <LogOut className="size-4" />
-        Logout
+        {signingOut ? "Signing out…" : "Logout"}
       </Button>
     </div>
   );

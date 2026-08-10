@@ -1,22 +1,37 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 
-import { login } from "@/shared/auth/auth-api";
-import { useAuthStore } from "@/shared/auth/auth-store";
-import type { LoginCredentials } from "@/shared/auth/types";
-import { routes } from "@/shared/config/site";
+import type { LoginResult } from "@/shared/auth/types";
 
-export function useLogin() {
-  const router = useRouter();
-  const setSession = useAuthStore((s) => s.setSession);
-
+/** Signs in through our route handler. A hard navigation follows, so the server re-reads the cookie. */
+export function useLogin(next?: string) {
   return useMutation({
-    mutationFn: (credentials: LoginCredentials) => login(credentials),
-    onSuccess: (data) => {
-      setSession({ user: data.user, token: data.token });
-      router.replace(routes.dashboard);
+    mutationFn: async (credentials: FormData): Promise<LoginResult> => {
+      let response: Response;
+      try {
+        response = await fetch("/api/auth/login", {
+          method: "POST",
+          body: credentials,
+        });
+      } catch {
+        throw new Error(
+          "Could not reach the service. Check your connection and try again.",
+        );
+      }
+
+      const result = (await response.json().catch(() => null)) as
+        | LoginResult
+        | null;
+
+      if (!result || !result.ok) {
+        throw new Error(result?.error ?? "Sign in failed. Please try again.");
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      window.location.assign(next ?? "/dashboard");
     },
   });
 }

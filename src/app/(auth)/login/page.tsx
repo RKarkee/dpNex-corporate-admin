@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeNext } from "@/shared/auth/session";
 import { siteConfig } from "@/shared/config/site";
 
 import { LoginForm } from "./_components/login-form";
@@ -13,7 +14,15 @@ const highlights = [
   { label: "Efficient", dot: "bg-brand-orange" },
 ];
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string; expired?: string }>;
+}) {
+  const params = await searchParams;
+  const next = safeNext(params.next);
+  const expired = params.expired === "1";
+
   return (
     <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl bg-card shadow-[0_24px_70px_-30px_rgb(15_23_42/0.45)] lg:grid-cols-2">
       {/* Brand panel */}
@@ -56,7 +65,17 @@ export default function LoginPage() {
               Access your cargo management dashboard
             </p>
           </div>
-          <LoginForm />
+
+          {expired ? (
+            <p
+              role="status"
+              className="mb-5 rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground"
+            >
+              Your session has ended. Please sign in again.
+            </p>
+          ) : null}
+
+          <LoginForm next={next} />
         </div>
       </div>
     </div>

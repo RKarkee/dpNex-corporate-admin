@@ -9,3 +9,8 @@ npm-debug.log*
 !.env.example
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Markdown is local notes — except the build phases, which are shared
+*.md
+!phases/**/*.md
+!readme.md

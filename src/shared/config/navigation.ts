@@ -7,7 +7,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { Role } from "@/shared/types";
+import { hasPermission } from "@/shared/auth/permissions";
+import type { User } from "@/shared/auth/types";
 
 /**
  * Single source of truth for sidebar navigation.
@@ -18,7 +19,8 @@ export type NavItem = {
   href?: string;
   icon: LucideIcon;
   children?: NavItem[];
-  roles?: Role[]; // for future role-based access
+  /** `"module.action"`. Omit to show the item to every signed-in user. */
+  permission?: string;
 };
 
 export const sidebarNav: NavItem[] = [
@@ -31,6 +33,7 @@ export const sidebarNav: NavItem[] = [
     title: "Users",
     href: "/users",
     icon: Users,
+    permission: "users.view",
   },
   {
     title: "Consignments",
@@ -40,30 +43,29 @@ export const sidebarNav: NavItem[] = [
         title: "Consignment Request",
         href: "/consignments/request",
         icon: FileText,
+        permission: "consignments.view",
       },
       {
         title: "Consignment Admin",
         href: "/consignments/admin",
         icon: Shield,
+        permission: "consignments.view",
       },
     ],
   },
 ];
 
-/**
- * Filter the nav tree by role. An item with no `roles` is visible to everyone.
- * A parent whose children are all filtered out is removed as well.
- */
-export function filterNavByRole(
+/** No `permission` means visible to all. Parents with no surviving children are dropped. */
+export function filterNavByPermission(
   items: NavItem[],
-  role: Role | undefined,
+  user: User | null,
 ): NavItem[] {
   return items.reduce<NavItem[]>((acc, item) => {
-    const allowed = !item.roles || (role !== undefined && item.roles.includes(role));
+    const allowed = !item.permission || hasPermission(user, item.permission);
     if (!allowed) return acc;
 
     if (item.children && item.children.length > 0) {
-      const children = filterNavByRole(item.children, role);
+      const children = filterNavByPermission(item.children, user);
       if (children.length === 0 && !item.href) return acc;
       acc.push({ ...item, children });
       return acc;

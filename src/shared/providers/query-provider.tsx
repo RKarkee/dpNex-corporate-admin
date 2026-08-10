@@ -3,13 +3,18 @@
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { ApiError } from "@/shared/api/errors";
+
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
-        retry: 1,
+        // A 401 cannot be retried into working; fall through to the redirect.
+        retry: (failureCount, error) =>
+          !(error instanceof ApiError && error.status === 401) &&
+          failureCount < 1,
       },
     },
   });

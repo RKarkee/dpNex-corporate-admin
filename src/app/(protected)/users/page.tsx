@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus, Users } from "lucide-react";
 
+import { requirePermission } from "@/shared/auth/require-permission";
 import { EmptyState } from "@/shared/components/empty-state";
 import { PageHeader } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   title: "Users",
 };
 
-export default function UsersPage() {
+export default async function UsersPage() {
+  await requirePermission("users.view");
+
   return (
     <>
       <PageHeader

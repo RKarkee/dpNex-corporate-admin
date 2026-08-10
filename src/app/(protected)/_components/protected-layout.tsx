@@ -2,7 +2,8 @@
 
 import * as React from "react";
 
-import { AuthGuard } from "@/shared/auth/auth-guard";
+import { SessionProvider } from "@/shared/auth/session-context";
+import type { User } from "@/shared/auth/types";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
 
@@ -10,15 +11,18 @@ import { useSidebarStore } from "../_store/sidebar-store";
 import { Header } from "./header";
 import { MobileSidebar, Sidebar } from "./sidebar";
 
-/**
- * App shell for every authenticated route:
- * fixed sidebar (rail on desktop, drawer on mobile) + sticky header + scrollable main.
- */
-export function ProtectedLayout({ children }: { children: React.ReactNode }) {
+/** App shell: sidebar (rail on desktop, drawer on mobile) + sticky header + main. */
+export function ProtectedLayout({
+  user,
+  children,
+}: {
+  user: User;
+  children: React.ReactNode;
+}) {
   const collapsed = useSidebarStore((s) => s.collapsed);
 
   return (
-    <AuthGuard>
+    <SessionProvider user={user}>
       <TooltipProvider>
         <div className="min-h-svh bg-background">
           <Sidebar />
@@ -37,6 +41,6 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </TooltipProvider>
-    </AuthGuard>
+    </SessionProvider>
   );
 }

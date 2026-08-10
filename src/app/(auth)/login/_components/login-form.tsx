@@ -10,18 +10,13 @@ import { Label } from "@/shared/components/ui/label";
 
 import { useLogin } from "../_hooks/use-login";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [showPassword, setShowPassword] = React.useState(false);
-  const { mutate, isPending, error } = useLogin();
+  const { mutate, isPending, error } = useLogin(next);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    mutate({
-      email: String(data.get("email") ?? ""),
-      password: String(data.get("password") ?? ""),
-      remember: data.get("remember") === "on",
-    });
+    mutate(new FormData(event.currentTarget));
   }
 
   return (
@@ -34,7 +29,6 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          defaultValue="spsysadmin@dpnex.com"
           placeholder="you@dpnex.com"
         />
       </div>
