@@ -3,54 +3,51 @@ import * as React from "react";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * A plain semantic table. No headless library — a table needs no behaviour,
- * and `<table>` already gives screen readers the row/column relationships that
- * a div grid would have to reconstruct with ARIA.
+ * The scroll container is part of the primitive, not the caller's job.
+ *
+ * The protected shell gives `<main>`'s inner column `min-w-0` so a wide child
+ * scrolls inside the column instead of stretching the whole page. That only
+ * works if the child actually owns an `overflow-x-auto` box — so every table
+ * gets one here, and no page can forget it.
  */
-
-export function Table({
-  className,
-  containerClassName,
-  ...props
-}: React.ComponentProps<"table"> & { containerClassName?: string }) {
+function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    // The scroller is the wrapper, not the table: a wide table on a phone
-    // should scroll sideways inside the card rather than widen the page.
-    <div
-      className={cn("scrollbar-thin relative w-full overflow-x-auto", containerClassName)}
-    >
+    <div data-slot="table-container" className="w-full overflow-x-auto">
       <table
-        className={cn("w-full caption-bottom border-collapse text-sm", className)}
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
         {...props}
       />
     </div>
   );
 }
 
-export function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead className={cn("[&_tr]:border-b", className)} {...props} />;
-}
-
-export function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
-    <tbody className={cn("[&_tr:last-child]:border-0", className)} {...props} />
-  );
-}
-
-export function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
-  return (
-    <tfoot
-      className={cn("border-t bg-muted/40 font-medium", className)}
+    <thead
+      data-slot="table-header"
+      className={cn("[&_tr]:border-b [&_tr]:border-border/70", className)}
       {...props}
     />
   );
 }
 
-export function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+  return (
+    <tbody
+      data-slot="table-body"
+      className={cn("[&_tr:last-child]:border-0", className)}
+      {...props}
+    />
+  );
+}
+
+function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
+      data-slot="table-row"
       className={cn(
-        "border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "border-b border-border/70 transition-colors hover:bg-secondary/60",
         className,
       )}
       {...props}
@@ -58,12 +55,12 @@ export function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-export function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
+      data-slot="table-head"
       className={cn(
-        "h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground",
-        "whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "h-11 whitespace-nowrap px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground",
         className,
       )}
       {...props}
@@ -71,26 +68,34 @@ export function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-export function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
-      className={cn(
-        "px-4 py-3 align-middle [&:has([role=checkbox])]:pr-0",
-        className,
-      )}
+      data-slot="table-cell"
+      className={cn("px-4 py-3 align-middle", className)}
       {...props}
     />
   );
 }
 
-export function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
+function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
   return (
-    <caption className={cn("mt-4 text-sm text-muted-foreground", className)} {...props} />
+    <caption
+      data-slot="table-caption"
+      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      {...props}
+    />
   );
 }
 
-/** Centred message spanning the whole table — "no results", "failed to load". */
-export function TableEmpty({
+/**
+ * A centred message spanning the whole table — "no results", "failed to load".
+ *
+ * Lives here rather than in each feature so the `colSpan` and the row height
+ * stay consistent: an empty state that is shorter than a populated row makes
+ * the card jump as a filter narrows the list to nothing.
+ */
+function TableEmpty({
   colSpan,
   children,
 }: {
@@ -98,10 +103,24 @@ export function TableEmpty({
   children: React.ReactNode;
 }) {
   return (
-    <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={colSpan} className="h-32 text-center text-muted-foreground">
+    <TableRow data-slot="table-empty" className="hover:bg-transparent">
+      <TableCell
+        colSpan={colSpan}
+        className="h-32 text-center text-muted-foreground"
+      >
         {children}
       </TableCell>
     </TableRow>
   );
 }
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+  TableEmpty,
+};
