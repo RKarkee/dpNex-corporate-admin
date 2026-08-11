@@ -59,6 +59,14 @@ export interface RequestConfig extends RequestOptions {
 export interface ApiResponse<T = unknown> {
   /** Post-unwrap payload — what the caller ultimately gets. */
   data: T;
+  /**
+   * The envelope's `message` — "Role created successfully".
+   *
+   * Worth surfacing: the API words these per endpoint, and echoing what it
+   * actually said beats a hardcoded string that can drift out of step with
+   * what the backend did.
+   */
+  message?: string;
   /** The untouched parsed body, envelope and all. */
   raw: unknown;
   /** Laravel's pagination block, when the endpoint paginates. */

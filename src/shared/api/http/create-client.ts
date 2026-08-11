@@ -180,6 +180,28 @@ export interface ApiClient {
     path: string,
     options: RequestOptions & { unwrap: string },
   ): Promise<{ items: T[]; meta: ApiResponse["meta"] }>;
+
+  /**
+   * A write that keeps the API's own success message, for the toast.
+   *
+   * `post()` and friends return only `data`, which is right for reads and for
+   * writes whose response you consume. Use this when you want to echo what the
+   * server said rather than hardcode "Saved".
+   */
+  mutate<T = unknown>(
+    method: HttpMethod,
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<MutationResult<T>>;
+}
+
+/** What a write returns when you care about the server's wording. */
+export interface MutationResult<T = unknown> {
+  data: T;
+  /** The envelope's `message`, e.g. "Role created successfully". */
+  message?: string;
+  status: number;
 }
 
 export function createApiClient(config: ClientConfig): ApiClient {
@@ -290,6 +312,7 @@ export function createApiClient(config: ClientConfig): ApiClient {
 
     let result: ApiResponse = {
       data,
+      message: extractMessage(raw),
       raw,
       meta: normalizeMeta(raw),
       status: response.status,
@@ -308,6 +331,19 @@ export function createApiClient(config: ClientConfig): ApiClient {
   function extractData(raw: unknown): unknown {
     if (isPlainObject(raw) && "data" in raw && "status" in raw) return raw.data;
     return raw;
+  }
+
+  /**
+   * The envelope's own `message`, if it is fit to show.
+   *
+   * Length-capped because a few endpoints put a stack trace or a paragraph of
+   * SQL in there on partial failures, and a toast is not the place for it.
+   */
+  function extractMessage(raw: unknown): string | undefined {
+    if (!isPlainObject(raw) || typeof raw.message !== "string") return undefined;
+
+    const message = raw.message.trim();
+    return message && message.length <= 200 ? message : undefined;
   }
 
   function shouldRetry(error: unknown, cfg: RequestConfig): boolean {
@@ -384,6 +420,20 @@ export function createApiClient(config: ClientConfig): ApiClient {
       return {
         items: Array.isArray(response.data) ? response.data : [],
         meta: response.meta,
+      };
+    },
+
+    async mutate<T>(
+      method: HttpMethod,
+      path: string,
+      body?: unknown,
+      options?: RequestOptions,
+    ): Promise<MutationResult<T>> {
+      const response = await request<T>(method, path, body, options);
+      return {
+        data: response.data,
+        message: response.message,
+        status: response.status,
       };
     },
   };

@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Package,
   Shield,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,14 @@ export const sidebarNav: NavItem[] = [
     // `corporate_view_any_user` is the list-scope grant; `view_user` covers a
     // user who may only open their own record. Either should reveal the link.
     anyPermission: ["corporate_view_any_user", "view_user"],
+  },
+  {
+    title: "Roles",
+    href: "/roles",
+    icon: ShieldCheck,
+    // `corporate_view_any_role` is the list grant; `view_role` covers opening
+    // a single role. Either should reveal the section.
+    anyPermission: ["corporate_view_any_role", "view_role"],
   },
   {
     title: "Consignments",

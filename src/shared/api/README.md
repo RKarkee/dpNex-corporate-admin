@@ -177,6 +177,34 @@ toast.error(error);                   // takes an ApiError, an Error, or a strin
 toast.warning({ title: "Almost", message: "Two documents are still missing" });
 ```
 
+### Echo the API's own wording
+
+`get`/`post`/… return only `data`. For a write whose success message you want
+to show, use `mutate()` — it keeps the envelope's `message`:
+
+```ts
+const result = await privateApiClient.mutate("POST", "/corporate/roles", input);
+toast.success(result.message ?? "Role created");   // "Role created successfully"
+```
+
+Same on the way back: `ApiError.message` **is** the upstream `message` for any
+4xx, so `toast.error(error)` already shows what the server said —
+`"This role is assigned to 4 users and cannot be deleted."`, not a generic
+line. At 500 and above it is replaced, because those bodies carry stack traces
+and SQL.
+
+A 422 also carries `fieldErrors`, keyed by request field. Map them onto inputs
+and show anything left over, so no server message is swallowed:
+
+```ts
+const label = error.fieldError("label");            // first message for a field
+const leftovers = Object.entries(error.fieldErrors ?? {})
+  .filter(([key]) => !RENDERED_FIELDS.includes(key));
+```
+
+`app/(protected)/roles/services/role.service.ts` and its `role-form.tsx` are
+the worked example, including Laravel's indexed keys (`permissions.3`).
+
 Top-right, stacked, 3s each, green for success and red for errors. Hovering
 pauses the timer. Failed requests toast themselves — pass `silent: true` when a
 call renders its own error and you do not want both.
