@@ -3,21 +3,20 @@
 /** `Y`/`N` flags, as the API spells booleans. */
 export type YesNo = "Y" | "N";
 
-/* -------------------------------------------------------------------------- */
-/* Permissions                                                                */
-/* -------------------------------------------------------------------------- */
-
 /**
  * `group_name` → permission names.
  *
  *   { users: ["view_user", "create_user"], consignments: ["view_consignment"] }
  *
- * Note what this is *not*: the names are whole permissions
- * (`view_user`), not `action` halves of a `module.action` string. The group is
- * a label for the UI, not part of the identifier — `view_user` is unique on its
- * own, which is why `can()` looks names up flat.
+ * Note what this is *not*: the names are whole permissions (`view_user`), not
+ * `action` halves of a `module.action` string. The group is a label for the
+ * UI, not part of the identifier — `view_user` is unique on its own, which is
+ * why `can()` looks names up flat.
  */
 export type PermissionMap = Record<string, string[] | undefined>;
+
+/** @deprecated Older alias for {@link PermissionMap}. Prefer the new name. */
+export type Permissions = PermissionMap;
 
 /** A permission as it appears nested inside a role. */
 export interface RolePermission {
@@ -29,24 +28,46 @@ export interface RolePermission {
   label?: string;
 }
 
+/** The join row, when a role arrives attached to a user. */
+export interface RolePivot {
+  model_type: string;
+  model_id: number;
+  role_id: number;
+  corporate_id: number | null;
+}
+
 /**
- * An account can hold several roles, or one, or none — the array length is not
+ * A role.
+ *
+ * One interface covering every endpoint that returns one — the users and roles
+ * features each grew their own, and TypeScript silently *merged* the two
+ * declarations rather than complaining, so a field present in only one of them
+ * still typechecked everywhere. The fields below are therefore the union, with
+ * anything not universally present marked optional.
+ *
+ * An account can hold several roles, or one, or none; the array length is not
  * something to rely on.
  */
 export interface Role {
   id: number;
-  /** The machine name, e.g. `1_default_corporate_admin`. */
+  /** The machine name — `1_default_corporate_admin`. Never shown to a user. */
   name: string;
+  /** The human name — `Corporate Admin`. What every surface should render. */
+  label?: string | null;
   scope: "global" | "corporate" | (string & {});
-  /** The corporate id this role is scoped to. `corporate`, not `corporate_id`. */
+  /**
+   * `/corporate/roles` and `/corporate/users` send `corporate`; the admin
+   * namespace sends `corporate_id`. Both optional — neither is on every payload.
+   */
   corporate?: number | null;
-  /** The display name — `"Corporate Admin"`. Prefer this over `name` in UI. */
-  label?: string;
+  corporate_id?: number | null;
   /** Grouped permission objects. The flat `user.permissions` map is the union. */
   permissions?: Record<string, RolePermission[] | undefined>;
+  /** Present when the role is nested under a user. */
+  pivot?: RolePivot;
 }
 
-/** A role's display name, falling back to the machine name. */
+/** The name to display, never the machine name. */
 export function roleLabel(role: Role): string {
   return role.label?.trim() || role.name;
 }
