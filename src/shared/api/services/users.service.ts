@@ -30,7 +30,6 @@ export interface CreateUserInput {
   phone?: string;
   password: string;
   password_confirmation: string;
-  user_type: string;
   disabled: YesNo;
   roles: number[];
 }
@@ -103,7 +102,6 @@ export async function createUser(input: CreateUserInput): Promise<User | null> {
   form.set("email", input.email);
   form.set("password", input.password);
   form.set("password_confirmation", input.password_confirmation);
-  form.set("user_type", input.user_type);
   form.set("disabled", input.disabled);
 
   if (input.phone?.trim()) form.set("phone", input.phone.trim());

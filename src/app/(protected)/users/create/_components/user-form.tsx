@@ -18,7 +18,7 @@ import {
   FormSelect,
   PasswordField,
 } from "./form-fields";
-import { RolePicker } from "./role-picker";
+import { RoleMultiSelect } from "../../_components/role-multi-select";
 
 /**
  * Add User.
@@ -33,11 +33,11 @@ import { RolePicker } from "./role-picker";
  */
 
 /** `user_type` on a corporate account. `ADM` belongs to the Super Admin portal. */
-const USER_TYPES = [
-  { value: "CRP", label: "Corporate" },
-  { value: "INT", label: "Internal" },
-  { value: "EXT", label: "External" },
-];
+// const USER_TYPES = [
+//   { value: "CRP", label: "Corporate" },
+//   { value: "INT", label: "Internal" },
+//   { value: "EXT", label: "External" },
+// ];
 
 const STATUSES: { value: YesNo; label: string }[] = [
   { value: "N", label: "Active" },
@@ -75,16 +75,9 @@ export function UserForm() {
       phone: String(form.get("phone") ?? "").trim(),
       password,
       password_confirmation: confirmation,
-      user_type: String(form.get("user_type") ?? "CRP"),
       disabled: form.get("disabled") === "Y" ? "Y" : "N",
       roles: roleIds,
     });
-  }
-
-  function toggleRole(id: number, checked: boolean) {
-    setRoleIds((current) =>
-      checked ? [...current, id] : current.filter((value) => value !== id),
-    );
   }
 
   return (
@@ -150,13 +143,13 @@ export function UserForm() {
             autoComplete="new-password"
             error={passwordError ?? fieldError("password_confirmation")}
           />
-          <FormSelect
+          {/* <FormSelect
             name="user_type"
             label="User type"
             defaultValue="CRP"
             options={USER_TYPES}
             error={fieldError("user_type")}
-          />
+          /> */}
           <FormSelect
             name="disabled"
             label="Status"
@@ -173,14 +166,17 @@ export function UserForm() {
           description="What this person may do. Roles can be changed later."
           single
         >
-          <RolePicker
+          <RoleMultiSelect
             roles={roles.data ?? []}
             selected={roleIds}
-            onToggle={toggleRole}
+            onChange={setRoleIds}
             isPending={roles.isPending}
             isError={roles.isError}
             onRetry={() => void roles.refetch()}
-            error={fieldError("roles")}
+            // Laravel keys array errors as `roles` and `roles.0`; take
+            // whichever it sent so a bad id is not silently dropped.
+            error={fieldError("roles") ?? fieldError("roles.0")}
+            disabled={isPending}
           />
         </FormSection>
       </Card>
