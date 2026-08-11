@@ -1,5 +1,5 @@
 
-import { hasPermission } from "@/shared/auth/permissions";
+import { hasAnyPermission, hasPermission } from "@/shared/auth/permissions";
 import type { User } from "@/shared/auth/types";
 import {NavItem} from "@/shared/config/nav-constant"; 
 import {sidebarNav} from "@/shared/config/nav-constant";
@@ -15,7 +15,12 @@ export function filterNavByPermission(
   user: User | null,
 ): NavItem[] {
   return items.reduce<NavItem[]>((acc, item) => {
-    const allowed = !item.permission || hasPermission(user, item.permission);
+    const allowed = item.permission
+      ? hasPermission(user, item.permission)
+      : item.anyPermission
+        ? hasAnyPermission(user, item.anyPermission)
+        : true;
+
     if (!allowed) return acc;
 
     if (item.children && item.children.length > 0) {

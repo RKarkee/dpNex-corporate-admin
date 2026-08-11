@@ -1,14 +1,26 @@
-import { LucideIcon, LayoutDashboard, Users, Package, FileText, Shield } from "lucide-react";
-
-
+import {
+  FileText,
+  LayoutDashboard,
+  Package,
+  Shield,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavItem = {
   title: string;
   href?: string;
   icon: LucideIcon;
   children?: NavItem[];
-  /** `"module.action"`. Omit to show the item to every signed-in user. */
+  /**
+   * A permission name exactly as `/me` returns it — `view_user`, not
+   * `users.view`. Names are globally unique, so no group prefix is needed.
+   * Omit to show the item to every signed-in user.
+   */
   permission?: string;
+  /** Visible if the user holds *any* of these. Use for a section that several
+   *  permissions can open. Ignored when `permission` is set. */
+  anyPermission?: string[];
 };
 
 export const sidebarNav: NavItem[] = [
@@ -21,7 +33,9 @@ export const sidebarNav: NavItem[] = [
     title: "Users",
     href: "/users",
     icon: Users,
-    permission: "users.view",
+    // `corporate_view_any_user` is the list-scope grant; `view_user` covers a
+    // user who may only open their own record. Either should reveal the link.
+    anyPermission: ["corporate_view_any_user", "view_user"],
   },
   {
     title: "Consignments",
@@ -31,13 +45,13 @@ export const sidebarNav: NavItem[] = [
         title: "Consignment Request",
         href: "/consignments/request",
         icon: FileText,
-        permission: "consignments.view",
+        anyPermission: ["view_consignment", "create_consignment"],
       },
       {
         title: "Consignment Admin",
         href: "/consignments/admin",
         icon: Shield,
-        permission: "consignments.view",
+        anyPermission: ["approve_consignment", "view_any_consignment"],
       },
     ],
   },

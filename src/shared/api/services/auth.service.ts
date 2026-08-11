@@ -2,7 +2,10 @@ import { ApiError } from "@/shared/api/errors";
 import { privateApiClient } from "@/shared/api/private-client";
 import { publicApiClient } from "@/shared/api/public-client";
 import { useAuthStore } from "@/shared/auth/auth-store";
-import { normalizePermissions } from "@/shared/auth/permissions";
+import {
+  normalizePermissions,
+  permissionsFromRoles,
+} from "@/shared/auth/permissions";
 import {
   isCorporateUser,
   isDisabled,
@@ -159,10 +162,27 @@ export async function login(credentials: LoginCredentials): Promise<LoginSession
 export async function hydratePermissions(signal?: AbortSignal): Promise<void> {
   const fresh = await fetchCurrentUser(signal);
 
+  // `/me` sends the flat map already; roles are the fallback for accounts
+  // where the backend returns roles but forgets to flatten them.
+  const permissions =
+    normalizePermissions(fresh.permissions) ??
+    permissionsFromRoles(fresh.roles) ??
+    undefined;
+
+  // A merge, not a replacement. `/me` omits `first_name`, `last_name`,
+  // `disabled` and `phone`, which only login returns — `patchUser` spreads
+  // over the stored user, so those survive.
   useAuthStore.getState().patchUser({
     ...fresh,
-    permissions: normalizePermissions(fresh.permissions) ?? fresh.permissions,
+    ...(permissions ? { permissions } : {}),
   });
+
+  // `/me` returns one fully-populated `corporate` where login gave a thin
+  // `{ corp_code, name }`. Upgrading the stored copy means anything reading
+  // credit limits or KYC status gets the real record.
+  if (fresh.corporate?.corp_code) {
+    useAuthStore.getState().upsertCorporate(fresh.corporate);
+  }
 }
 
 /**
@@ -180,23 +200,24 @@ export async function hydratePermissions(signal?: AbortSignal): Promise<void> {
  * it expires. This drops our copy of it.
  */
 export function logout(): void {
-  useAuthStore.getState().clear(); // store + cookies
-
-  // `clear()` writes an empty state through the persist middleware; this
-  // removes the key outright, so nothing is left to inspect or rehydrate.
-  useAuthStore.persist.clearStorage();
+  // Cookies, in-memory state, and every `dpnex.auth*` key in local and session
+  // storage — see the comment on `clear()` for why the order inside it matters.
+  useAuthStore.getState().clear();
 }
 
 /**
- * Re-reads the current user. `GET /me` returns `{ user }` at the top level,
- * not under `data` — the envelope varies per endpoint.
+ * Re-reads the current user.
+ *
+ * `GET /me` puts the user **at `data` itself** — `{ status, message, data: {
+ * id, email, corporate, roles, permissions } }` — not at `data.user` the way
+ * login does. So: no `unwrap`. The client peels the envelope and hands back
+ * `data`, which already is the user.
  *
  * `skipAuthRedirect` because this call is often *how* we discover the session
  * is dead; letting the interceptor redirect would pre-empt the caller.
  */
 export function fetchCurrentUser(signal?: AbortSignal): Promise<User> {
   return privateApiClient.get<User>("/me", {
-    unwrap: "user",
     skipAuthRedirect: true,
     silent: true,
     signal,

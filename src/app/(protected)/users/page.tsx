@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function UsersPage() {
 
   return (
-    <RequirePermission permission="users.view">
+    <RequirePermission anyOf={["corporate_view_any_user", "view_user"]}>
       <PageHeader
         title="Users"
         description="Manage staff accounts, roles and access across DpNEx."

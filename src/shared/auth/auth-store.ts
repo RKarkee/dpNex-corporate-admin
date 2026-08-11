@@ -36,11 +36,38 @@ interface AuthState {
 
   setSession: (session: LoginSession, remember?: boolean) => void;
   setActiveCorporate: (code: string) => void;
+  /** Merges a richer corporate record over the thin one login provided. */
+  upsertCorporate: (corporate: Corporate) => void;
   /** Refreshes the user after a profile edit without touching the rest. */
   patchUser: (patch: Partial<User>) => void;
   clear: () => void;
 
   isAuthenticated: () => boolean;
+}
+
+/** The localStorage key. Declared here so the purge below cannot drift from it. */
+export const AUTH_STORAGE_KEY = "dpnex.auth";
+
+/**
+ * Removes every trace of the session from storage.
+ *
+ * Not `persist.clearStorage()` — that only knows the current key, and a
+ * `version` bump leaves the previous one behind. This sweeps anything that
+ * starts with the key, plus the sessionStorage copy an earlier build wrote.
+ */
+function purgeAuthStorage(): void {
+  if (typeof window === "undefined") return;
+
+  for (const store of [window.localStorage, window.sessionStorage]) {
+    try {
+      const stale = Object.keys(store).filter((key) =>
+        key.startsWith(AUTH_STORAGE_KEY),
+      );
+      for (const key of stale) store.removeItem(key);
+    } catch {
+      // Private mode, or storage disabled. The in-memory clear still stands.
+    }
+  }
 }
 
 /** A fresh object each time, so no two resets share an array. */
@@ -104,15 +131,54 @@ export const useAuthStore = create<AuthState>()(
         set({ activeCorporateCode: code });
       },
 
+      upsertCorporate: (corporate) =>
+        set((state) => {
+          const index = state.corporates.findIndex(
+            (c) => c.corp_code === corporate.corp_code,
+          );
+
+          // Spread the incoming record *over* the stored one rather than
+          // replacing it — login's `name` should survive a `/me` payload that
+          // happens to omit it.
+          const next = [...state.corporates];
+          if (index >= 0) next[index] = { ...next[index], ...corporate };
+          else next.push(corporate);
+
+          return {
+            corporates: next,
+            activeCorporateCode: state.activeCorporateCode ?? corporate.corp_code,
+          };
+        }),
+
       patchUser: (patch) => {
         const user = get().user;
         if (!user) return;
         set({ user: { ...user, ...patch } });
       },
 
+      /**
+       * Full teardown: cookies, in-memory state, and the persisted copy.
+       *
+       * Order matters and so does the early return. `set()` runs through the
+       * persist middleware, which writes localStorage synchronously — so the
+       * purge has to come *after* the set, or it removes a key that is
+       * immediately rewritten.
+       *
+       * The early return closes the other half of that trap: `AuthGuard` calls
+       * `clear()` again the moment it notices there is no token, and that
+       * second `set()` would resurrect `dpnex.auth` as an empty object. Empty
+       * state is not sensitive, but a key that reappears after logout is a
+       * question nobody should have to answer.
+       */
       clear: () => {
         clearAuthCookies();
-        set(emptyState());
+
+        const { token, user, corporates } = get();
+        const alreadyEmpty = !token && !user && corporates.length === 0;
+
+        if (!alreadyEmpty) set(emptyState());
+
+        purgeAuthStorage();
       },
 
       isAuthenticated: () => {
@@ -122,7 +188,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "dpnex.auth",
+      name: AUTH_STORAGE_KEY,
       storage: createJSONStorage(() =>
         typeof window === "undefined"
           ? // SSR pass: a no-op store, so `persist` does not touch `window`.

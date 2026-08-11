@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function ConsignmentRequestPage() {
 
   return (
-    <RequirePermission permission="consignments.view">
+    <RequirePermission anyOf={["view_consignment", "create_consignment"]}>
       <PageHeader
         title="Consignment Request"
         description="Submit and track new consignment requests raised by agents and customers."
