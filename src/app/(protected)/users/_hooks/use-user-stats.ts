@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { listUsers } from "@/shared/api/services/users.service";
+import { listUsers } from "@/app/(protected)/users/services/users.service";
 import { roleLabel, type User } from "@/shared/auth/types";
 
 /**

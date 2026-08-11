@@ -8,7 +8,7 @@ import {
   assignRoles,
   createUser,
   type CreateUserInput,
-} from "@/shared/api/services/users.service";
+} from "@/app/(protected)/users/services/users.service";
 import { toast } from "@/shared/components/toast";
 
 /**

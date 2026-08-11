@@ -2,9 +2,9 @@
 
 import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { useUserStats } from "@/shared/hooks/use-user-stats";
 
 import { StatCard, type StatTone } from "../../_components/stat-card";
+import { useUserStats } from "../_hooks/use-user-stats";
 
 /** Cycled across the role cards so a long list stays readable. */
 const ROLE_TONES: StatTone[] = ["crimson", "orange", "navy"];
