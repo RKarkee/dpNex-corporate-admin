@@ -1,19 +1,28 @@
 "use client";
 
-import { Menu, Search } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Menu } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
+import { routes, siteConfig } from "@/shared/config/site";
 
 import { useSidebarStore } from "../_store/sidebar-store";
-import { Brand } from "./brand";
 import { UserMenu } from "./user-menu";
+
+/**
+ * Swap `public/dpnex-logo.svg` for the real artwork. Keep these dimensions in
+ * step with the file's viewBox, or Next reserves the wrong box and the header
+ * shifts as the image decodes.
+ */
+const LOGO = { src: "/dpnex-logo.svg", width: 168, height: 40 } as const;
 
 export function Header() {
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-card/85 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border bg-card/85 px-4 backdrop-blur-md sm:gap-3 sm:px-6">
+      {/* Mobile: opens the drawer. Hidden on desktop, where the rail is fixed. */}
       <Button
         variant="ghost"
         size="icon-sm"
@@ -24,21 +33,26 @@ export function Header() {
         <Menu className="size-5" />
       </Button>
 
-      <div className="lg:hidden">
-        <Brand />
-      </div>
+      {/* No desktop collapse toggle here — the rail owns it, on its own border. */}
 
-      <div className="hidden max-w-sm flex-1 lg:block">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search shipments, users, consignments…"
-            className="h-10 pl-9"
-            aria-label="Search"
-          />
-        </div>
-      </div>
+      <Link
+        href={routes.dashboard}
+        aria-label={`${siteConfig.name} home`}
+        className="flex shrink-0 items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      >
+        <Image
+          src={LOGO.src}
+          alt={siteConfig.name}
+          width={LOGO.width}
+          height={LOGO.height}
+          // `priority` — it is above the fold on every page, so it should not
+          // wait behind lazy-loaded content.
+          priority
+          // Height-locked, width auto: the intrinsic ratio is preserved without
+          // hardcoding a width that the real logo may not share.
+          className="h-9 w-auto"
+        />
+      </Link>
 
       <div className="ml-auto flex items-center">
         <UserMenu />

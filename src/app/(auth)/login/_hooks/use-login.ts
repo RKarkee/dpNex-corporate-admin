@@ -1,37 +1,48 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 
-import type { LoginResult } from "@/shared/auth/types";
+import { isApiError } from "@/shared/api/errors";
+import { login, type LoginCredentials } from "@/shared/api/services/auth.service";
+import { displayName, type LoginSession } from "@/shared/auth/types";
+import { toast } from "@/shared/components/toast";
 
-/** Signs in through our route handler. A hard navigation follows, so the server re-reads the cookie. */
+/**
+ * Signs in, then routes to the dashboard.
+ *
+ * A client-side navigation, not a page reload. Nothing in the server tree
+ * reads the session any more — `(protected)/layout.tsx` is a pass-through and
+ * `AuthGuard` decides from the store — so there is nothing on the server to
+ * re-render and no reason to throw away the React tree, the toast that just
+ * fired, or the warm bundle.
+ *
+ * `replace`, not `push`: /login must not sit in history behind the dashboard,
+ * or Back lands a signed-in user on the sign-in form.
+ */
 export function useLogin(next?: string) {
-  return useMutation({
-    mutationFn: async (credentials: FormData): Promise<LoginResult> => {
-      let response: Response;
-      try {
-        response = await fetch("/api/auth/login", {
-          method: "POST",
-          body: credentials,
-        });
-      } catch {
-        throw new Error(
-          "Could not reach the service. Check your connection and try again.",
-        );
-      }
+  const router = useRouter();
 
-      const result = (await response.json().catch(() => null)) as
-        | LoginResult
-        | null;
+  return useMutation<LoginSession, Error, LoginCredentials>({
+    mutationFn: (credentials) => login(credentials),
 
-      if (!result || !result.ok) {
-        throw new Error(result?.error ?? "Sign in failed. Please try again.");
-      }
+    onSuccess: (session) => {
+      toast.success(`Welcome back, ${displayName(session.user)}`);
 
-      return result;
+      // The cookie is already written — `setSession` does it synchronously —
+      // so `proxy.ts` sees a session on this very navigation.
+      router.replace(next ?? "/dashboard");
     },
-    onSuccess: () => {
-      window.location.assign(next ?? "/dashboard");
+
+    onError: (error) => {
+      // A disabled account or the wrong portal is not a typo — it needs the
+      // toast, not just the inline hint under the form.
+      if (isApiError(error) && error.isForbidden) {
+        toast.error({ title: "Cannot sign in", message: error.message });
+        return;
+      }
+
+      toast.error(error);
     },
   });
 }

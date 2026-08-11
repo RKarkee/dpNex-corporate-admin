@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 
 import { useSession } from "@/shared/auth/session-context";
+import { logout } from "@/shared/api/services/auth.service";
 import { displayName } from "@/shared/auth/types";
 import {
   Avatar,
@@ -23,6 +25,7 @@ import {
 import { getInitials } from "@/shared/lib/utils";
 
 export function UserMenu() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const user = useSession();
   const [signingOut, setSigningOut] = React.useState(false);
@@ -30,17 +33,20 @@ export function UserMenu() {
   const name = displayName(user);
   const avatarUrl = user.image_thumbnail ?? user.image ?? undefined;
 
-  async function handleLogout() {
+  function handleLogout() {
     setSigningOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // A hard reload still lands on /login, where the layout's check takes over.
-    }
+
+    // Token, store, localStorage and cookies.
+    logout();
 
     // Otherwise the next user on this machine sees the previous one's cached lists.
     queryClient.clear();
-    window.location.assign("/login");
+
+    // A client-side navigation. The old hard reload existed because the server
+    // used to resolve the session; it no longer does, so there is nothing on
+    // the server to re-render. `replace` keeps /dashboard out of history, so
+    // Back cannot walk into a signed-out shell.
+    router.replace("/login");
   }
 
   return (

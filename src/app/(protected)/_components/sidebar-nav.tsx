@@ -15,11 +15,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import {
-  isHrefActive,
-  isNavItemActive,
-  type NavItem,
-} from "@/shared/config/navigation";
+import { isHrefActive, isNavItemActive } from "@/shared/config/navigation";
+import type { NavItem } from "@/shared/config/nav-constant";
 import { cn } from "@/shared/lib/utils";
 
 import { useSidebarStore } from "../_store/sidebar-store";
@@ -39,8 +36,21 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const pathname = usePathname();
 
+  if (items.length === 0) {
+    // Only reachable if the permission map excludes literally everything.
+    // A blank rail reads as a broken app, so say what happened.
+    return (
+      <p className={cn("px-4 py-6 text-xs text-muted-foreground", collapsed && "hidden")}>
+        No sections available for your account.
+      </p>
+    );
+  }
+
   return (
-    <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Main navigation">
+    <nav
+      className={cn("flex flex-col gap-1 py-4", collapsed ? "px-2" : "px-3")}
+      aria-label="Main navigation"
+    >
       {items.map((item) =>
         item.children && item.children.length > 0 ? (
           <NavGroup
@@ -91,19 +101,17 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none",
+        "group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors outline-none",
         "focus-visible:ring-2 focus-visible:ring-ring/30",
-        collapsed && "justify-center px-0",
+        // A 44px target either way — the icon-only rail must not be harder to hit.
+        collapsed ? "h-11 w-11 justify-center px-0" : "px-3 py-2.5",
         active
           ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       )}
     >
       <Icon
-        className={cn(
-          "size-[18px] shrink-0",
-          active ? "opacity-100" : "opacity-80",
-        )}
+        className={cn("size-[18px] shrink-0", active ? "opacity-100" : "opacity-80")}
         strokeWidth={active ? 2.3 : 2}
       />
       {!collapsed ? <span className="truncate">{item.title}</span> : null}
@@ -137,6 +145,7 @@ interface NavGroupProps {
 function NavGroup({ item, pathname, collapsed, onNavigate }: NavGroupProps) {
   const openGroups = useSidebarStore((s) => s.openGroups);
   const setGroupOpen = useSidebarStore((s) => s.setGroupOpen);
+  const expandWithGroup = useSidebarStore((s) => s.expandWithGroup);
 
   const groupActive = isNavItemActive(pathname, item);
   const open = openGroups.includes(item.title);
@@ -145,25 +154,33 @@ function NavGroup({ item, pathname, collapsed, onNavigate }: NavGroupProps) {
 
   // Auto-expand the group that owns the current route.
   React.useEffect(() => {
-    if (groupActive && !open) setGroupOpen(item.title, true);
-  }, [groupActive, open, item.title, setGroupOpen]);
+    if (groupActive) setGroupOpen(item.title, true);
+  }, [groupActive, item.title, setGroupOpen]);
 
   if (collapsed) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link
-            href={children[0]?.href ?? "#"}
-            onClick={onNavigate}
+          {/*
+            A button, not a link to the first child. Clicking a collapsed group
+            used to navigate somewhere the user had not chosen; now it opens the
+            rail with that group expanded, which is what the click was asking for.
+          */}
+          <button
+            type="button"
+            onClick={() => expandWithGroup(item.title)}
+            aria-label={`Expand sidebar and open ${item.title}`}
+            aria-expanded={false}
             className={cn(
-              "flex items-center justify-center rounded-lg py-2.5 text-sm font-medium transition-colors",
+              "flex h-11 w-11 items-center justify-center rounded-lg text-sm font-medium transition-colors outline-none",
+              "focus-visible:ring-2 focus-visible:ring-ring/30",
               groupActive
                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
             )}
           >
             <Icon className="size-[18px]" strokeWidth={groupActive ? 2.3 : 2} />
-          </Link>
+          </button>
         </TooltipTrigger>
         <TooltipContent side="right">
           <span className="font-semibold">{item.title}</span>

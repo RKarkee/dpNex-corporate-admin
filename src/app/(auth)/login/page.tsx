@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { safeNext } from "@/shared/auth/session";
+import { safeNext } from "@/shared/auth/session-config";
 import { siteConfig } from "@/shared/config/site";
 
 import { LoginForm } from "./_components/login-form";

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE, safeNext } from "@/shared/auth/session";
+// `session-config`, not `session`: middleware runs in the Edge runtime, where
+// `next/headers` is unavailable.
+import { SESSION_COOKIE, safeNext } from "@/shared/auth/session-config";
 
 /**
  * Route gate (Next 16's `proxy` convention). Checks only that a cookie exists —
@@ -8,7 +10,8 @@ import { SESSION_COOKIE, safeNext } from "@/shared/auth/session";
  */
 
 export const config = {
-  // `/api` is excluded so /api/gateway answers 401 JSON rather than redirecting to HTML.
+  // `/api` is excluded so route handlers answer for themselves rather than
+  // being redirected to an HTML login page.
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)",
   ],

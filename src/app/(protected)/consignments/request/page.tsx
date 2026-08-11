@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FileText, Plus } from "lucide-react";
 
-import { requirePermission } from "@/shared/auth/require-permission";
+import { RequirePermission } from "@/shared/auth/require-permission";
 import { EmptyState } from "@/shared/components/empty-state";
 import { PageHeader } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
@@ -10,11 +10,10 @@ export const metadata: Metadata = {
   title: "Consignment Request",
 };
 
-export default async function ConsignmentRequestPage() {
-  await requirePermission("consignments.view");
+export default function ConsignmentRequestPage() {
 
   return (
-    <>
+    <RequirePermission permission="consignments.view">
       <PageHeader
         title="Consignment Request"
         description="Submit and track new consignment requests raised by agents and customers."
@@ -30,6 +29,6 @@ export default async function ConsignmentRequestPage() {
         title="No requests to show"
         description="Incoming consignment requests will appear here once the API is connected."
       />
-    </>
+    </RequirePermission>
   );
 }

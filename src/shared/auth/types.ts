@@ -18,11 +18,20 @@ export interface Role {
 /** Module name → granted actions, e.g. `{ users: ["view", "create"] }`. */
 export type Permissions = Record<string, string[] | undefined>;
 
+/**
+ * As returned in `data.corporates` at login.
+ *
+ * `corp_code` is the value the API wants in `X-Corporate-Code` — a short code
+ * like `ABCDEF`, *not* the numeric `corporate_id` on the user record.
+ */
 export interface Corporate {
-  id: number;
-  name?: string | null;
-  code?: string | null;
+  corp_code: string;
+  name: string;
+  id?: number;
 }
+
+/** `Y` means the account is switched off; every gate must refuse it. */
+export type YesNo = "Y" | "N";
 
 export interface User {
   id: number;
@@ -32,15 +41,53 @@ export interface User {
   slug?: string | null;
   email: string;
   phone?: string | null;
-  disabled: "Y" | "N";
+  disabled: YesNo;
+  allow_login?: YesNo;
   /** `CRP` is the corporate user type this portal is built for. */
   user_type: "INT" | "EXT" | "CRP" | "ADM" | (string & {});
   corporate_id?: number | string | null;
-  corporates?: Corporate | Corporate[] | null;
+  email_verified_at?: string | null;
+  last_login_at?: string | null;
   roles?: Role[];
   permissions?: Permissions;
   image?: string | null;
   image_thumbnail?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+/** The `data` block of `POST /login`, exactly as the API returns it. */
+export interface LoginResponseData {
+  token: string;
+  user: User;
+  corporates?: Corporate[];
+}
+
+/** The normalised login response. Hydrates `useAuthStore`. */
+export interface LoginSession {
+  token: string;
+  user: User;
+  corporates: Corporate[];
+  activeCorporateCode: string | null;
+}
+
+/** Lets the UI react to *why* a sign-in failed, not just that it did. */
+export type LoginFailureCode =
+  | "invalid_credentials"
+  | "not_corporate_user"
+  | "account_disabled"
+  | "no_corporate"
+  | "unavailable";
+
+/** The portal is corporate-only; every other user type belongs elsewhere. */
+export const REQUIRED_USER_TYPE = "CRP";
+
+export function isCorporateUser(user: Pick<User, "user_type">): boolean {
+  return user.user_type === REQUIRED_USER_TYPE;
+}
+
+export function isDisabled(user: Pick<User, "disabled" | "allow_login">): boolean {
+  return user.disabled === "Y" || user.allow_login === "N";
 }
 
 /** A name safe to render — the API leaves `name` null when only first/last are set. */
@@ -55,5 +102,14 @@ export function displayName(user: User): string {
   return full || user.email;
 }
 
-/** What the login route returns to the browser. Never carries the token. */
-export type LoginResult = { ok: true } | { ok: false; error: string };
+/** Two letters for the avatar fallback. */
+export function initials(user: User): string {
+  const source = displayName(user);
+  const parts = source.split(/\s+/).filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  }
+
+  return source.slice(0, 2).toUpperCase();
+}

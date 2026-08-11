@@ -14,17 +14,17 @@ export function Brand({ compact = false, className }: BrandProps) {
   return (
     <Link
       href={routes.dashboard}
+      aria-label={`${siteConfig.name} home`}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+        "group flex items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
         className,
       )}
-      aria-label={`${siteConfig.name} home`}
     >
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-soft">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-soft transition-transform group-hover:scale-105">
         <Package className="size-[18px]" strokeWidth={2.2} />
       </span>
       {!compact ? (
-        <span className="text-lg font-bold tracking-tight text-foreground">
+        <span className="truncate text-lg font-bold tracking-tight text-foreground">
           {siteConfig.name}
         </span>
       ) : null}

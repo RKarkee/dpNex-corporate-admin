@@ -1,59 +1,13 @@
-import {
-  FileText,
-  LayoutDashboard,
-  Package,
-  Shield,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
 
 import { hasPermission } from "@/shared/auth/permissions";
 import type { User } from "@/shared/auth/types";
-
+import {NavItem} from "@/shared/config/nav-constant"; 
+import {sidebarNav} from "@/shared/config/nav-constant";
 /**
  * Single source of truth for sidebar navigation.
  * Add an entry here and it appears in the desktop sidebar and the mobile drawer.
  */
-export type NavItem = {
-  title: string;
-  href?: string;
-  icon: LucideIcon;
-  children?: NavItem[];
-  /** `"module.action"`. Omit to show the item to every signed-in user. */
-  permission?: string;
-};
 
-export const sidebarNav: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Users",
-    href: "/users",
-    icon: Users,
-    permission: "users.view",
-  },
-  {
-    title: "Consignments",
-    icon: Package,
-    children: [
-      {
-        title: "Consignment Request",
-        href: "/consignments/request",
-        icon: FileText,
-        permission: "consignments.view",
-      },
-      {
-        title: "Consignment Admin",
-        href: "/consignments/admin",
-        icon: Shield,
-        permission: "consignments.view",
-      },
-    ],
-  },
-];
 
 /** No `permission` means visible to all. Parents with no surviving children are dropped. */
 export function filterNavByPermission(

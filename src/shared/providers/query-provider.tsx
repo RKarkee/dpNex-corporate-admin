@@ -3,7 +3,8 @@
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { ApiError } from "@/shared/api/errors";
+import { isApiError } from "@/shared/api/errors";
+import { toast } from "@/shared/components/toast/toast";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -11,10 +12,25 @@ function makeQueryClient() {
       queries: {
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
-        // A 401 cannot be retried into working; fall through to the redirect.
-        retry: (failureCount, error) =>
-          !(error instanceof ApiError && error.status === 401) &&
-          failureCount < 1,
+        // Nothing the user can retry into working: a 401 redirects, a 403/404
+        // is a settled answer, a 422 is their input. Only transient faults
+        // deserve a second attempt.
+        retry: (failureCount, error) => {
+          if (isApiError(error) && [401, 403, 404, 422].includes(error.status)) {
+            return false;
+          }
+          return failureCount < 1;
+        },
+      },
+      mutations: {
+        // Mutations are never retried — a duplicate POST creates a duplicate row.
+        retry: false,
+        // A failed mutation with no local `onError` would otherwise fail
+        // silently. The client interceptor already toasted anything it saw;
+        // this catches errors thrown from `onSuccess` and elsewhere.
+        onError: (error) => {
+          if (!isApiError(error)) toast.error(error);
+        },
       },
     },
   });

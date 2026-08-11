@@ -16,7 +16,13 @@ export function LoginForm({ next }: { next?: string }) {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    mutate(new FormData(event.currentTarget));
+
+    const form = new FormData(event.currentTarget);
+    mutate({
+      email: String(form.get("email") ?? ""),
+      password: String(form.get("password") ?? ""),
+      remember: form.get("remember") === "on",
+    });
   }
 
   return (

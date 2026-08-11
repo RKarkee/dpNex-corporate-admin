@@ -1,20 +1,19 @@
 import * as React from "react";
-import { redirect } from "next/navigation";
-
-import { getServerUser } from "@/shared/auth/session";
 
 import { ProtectedLayout } from "./_components/protected-layout";
 
-export default async function ProtectedGroupLayout({
+/**
+ * No server-side session check.
+ *
+ * The token lives in the browser, so a `GET /me` here would be a second,
+ * redundant round trip that fails independently of the real one — and any
+ * failure redirected to /login, which is what bounced signed-in users back to
+ * the sign-in page. `AuthGuard` inside `ProtectedLayout` owns the decision now.
+ */
+export default function ProtectedGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getServerUser();
-
-  // Via the logout handler, not straight to /login: a Server Component cannot
-  // clear a cookie, and a stale one would bounce the user back here forever.
-  if (!user) redirect("/api/auth/logout?expired=1");
-
-  return <ProtectedLayout user={user}>{children}</ProtectedLayout>;
+  return <ProtectedLayout>{children}</ProtectedLayout>;
 }
