@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/shared/components/page-header";
 
 import { QuickActions } from "./_components/quick-actions";
-import { StatCard } from "./_components/stat-card";
+import { StatCard } from "../_components/stat-card";
 
 export const metadata: Metadata = {
   title: "Dashboard",

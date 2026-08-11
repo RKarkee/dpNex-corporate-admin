@@ -9,10 +9,24 @@ export interface RolePivot {
 
 export interface Role {
   id: number;
+  /** The machine name — `1_default_corporate_admin`. Never shown to a user. */
   name: string;
+  /** The human name — `Corporate Admin`. What every surface should render. */
+  label?: string | null;
   scope: "global" | "corporate" | (string & {});
-  corporate_id: number | null;
+  /**
+   * `/corporate/roles` and `/corporate/users` send `corporate`; the admin
+   * namespace sends `corporate_id`. Both are optional because neither is
+   * present on every payload.
+   */
+  corporate?: number | null;
+  corporate_id?: number | null;
   pivot?: RolePivot;
+}
+
+/** The name to display, never the slug. Verified against a live response. */
+export function roleLabel(role: Role): string {
+  return role.label?.trim() || role.name;
 }
 
 /** Module name → granted actions, e.g. `{ users: ["view", "create"] }`. */
