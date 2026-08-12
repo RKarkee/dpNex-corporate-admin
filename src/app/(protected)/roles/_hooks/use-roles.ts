@@ -56,6 +56,13 @@ export function useRole(id: number | undefined) {
     queryKey: roleKeys.detail(id ?? 0),
     queryFn: ({ signal }) => fetchRole(id as number, signal),
     enabled: typeof id === "number" && Number.isFinite(id),
+
+    // Same reasoning as `useUser`: opening a detail or edit page must ask the
+    // server, not replay a copy the app-wide `staleTime: 60_000` is still
+    // holding. The edit form writes this record back, so a stale seed here
+    // means saving whatever was true a minute ago.
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 

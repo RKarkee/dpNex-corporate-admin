@@ -4,8 +4,9 @@ import { ArrowLeft } from "lucide-react";
 
 import { RequirePermission } from "@/shared/auth/require-permission";
 import { PageHeader } from "@/shared/components/page-header";
+import { Button } from "@/shared/components/ui/button";
 
-import { UserForm } from "./_components/user-form";
+import { CreateUserForm } from "./_components/create-user-form";
 
 export const metadata: Metadata = {
   title: "Add user",
@@ -17,21 +18,23 @@ export default function CreateUserPage() {
   // the moment a real permission map arrives.
   return (
     <RequirePermission permission="create_user">
-      <Link
-        href="/users"
-        className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-      >
-        <ArrowLeft className="size-4" />
-        Back to users
-      </Link>
-
       <PageHeader
         title="Add user"
         description="Create an account for someone in your corporate."
+        actions={
+          // The same control the detail page uses, rather than a bare text
+          // link above the title — one way back from every user screen.
+          <Button variant="outline" asChild className="flex-1 sm:flex-none">
+            <Link href="/users">
+              <ArrowLeft className="size-4" />
+              Back
+            </Link>
+          </Button>
+        }
       />
 
       <div className="max-w-3xl">
-        <UserForm />
+        <CreateUserForm />
       </div>
     </RequirePermission>
   );

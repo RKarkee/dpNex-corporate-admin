@@ -14,8 +14,8 @@ import { cn } from "@/shared/lib/utils";
  * reads it back with `FormData` on submit. The only prop that changes how a
  * field renders is `error`, which comes from the server's 422.
  *
- * Kept in this folder rather than `shared/`: the user form is the only caller.
- * They move up the moment a second form needs them.
+ * Kept in this folder rather than `shared/`: the create and edit forms are the
+ * only callers, and both live under `users/`.
  */
 
 export function FormSection({

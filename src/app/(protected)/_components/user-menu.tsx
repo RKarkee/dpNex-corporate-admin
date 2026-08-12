@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import { useFileUrl } from "@/shared/hooks/use-file-url";
 import { getInitials } from "@/shared/lib/utils";
 
 export function UserMenu() {
@@ -31,7 +32,9 @@ export function UserMenu() {
   const [signingOut, setSigningOut] = React.useState(false);
 
   const name = displayName(user);
-  const avatarUrl = user.image_thumbnail ?? user.image ?? undefined;
+  // Not a file URL — an authenticated endpoint. `useFileUrl` resolves it and
+  // yields null until it does, which shows the initials fallback.
+  const { src: avatarUrl } = useFileUrl(user.image_thumbnail ?? user.image);
 
   function handleLogout() {
     setSigningOut(true);

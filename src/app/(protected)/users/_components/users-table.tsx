@@ -1,88 +1,145 @@
 "use client";
 
 import { useOptionalSession } from "@/shared/auth/session-context";
-import {
-  displayName,
-  initials,
-  isDisabled,
-  roleLabel,
-  type Role,
-  type User,
-} from "@/shared/auth/types";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/shared/components/ui/avatar";
-import { Badge } from "@/shared/components/ui/badge";
+import { displayName, isDisabled, type User } from "@/shared/auth/types";
 import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
   Table,
   TableBody,
   TableCell,
+  TableEmpty,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import { cn } from "@/shared/lib/utils";
 
-/** How many role chips render before the rest collapse into a `+N`. */
-const VISIBLE_ROLES = 2;
+import { UserAvatar } from "./user-avatar";
+import { UserRowActions } from "./user-row-actions";
+import { UserStatusBadge } from "./user-status-badge";
 
-export function UsersTable({ users }: { users: User[] }) {
+/**
+ * The directory table.
+ *
+ * Six columns do not fit a phone, and sideways scrolling would push the
+ * actions — the thing people came for — off screen. So Email, Phone and Status
+ * drop out below their breakpoints and restack under the name instead, where
+ * nothing is lost. Status restacks as the dot on the avatar, plus the word
+ * when someone is disabled.
+ *
+ * Roles are deliberately not a column: a person can hold several, which makes
+ * the cell either a wrapping pile of badges or a `+N` that answers nothing.
+ * The detail page lists them in full, with the permissions each one grants.
+ */
+/**
+ * Tighter gutters below `sm`, so the three visible columns fit a 375px screen
+ * without the container scrolling the actions off the right edge. Written once
+ * here because the table and its skeleton have to agree on column widths.
+ */
+const TABLE_DENSITY =
+  "[&_td]:px-2 [&_th]:px-2 sm:[&_td]:px-4 sm:[&_th]:px-4";
+
+/**
+ * The last column, pinned to the right below `sm`.
+ *
+ * `bg-inherit` rather than a colour of its own: the row owns the background,
+ * so hover still reaches the pinned cell instead of being painted over by it.
+ * Above `sm` there is room for every column and pinning is only noise.
+ */
+const STICKY_ACTIONS =
+  "sticky right-0 border-l border-border/70 bg-inherit sm:static sm:border-l-0";
+
+/** For the `colSpan` of the "no results" row. */
+const COLUMNS = 6;
+
+export interface UsersTableProps {
+  users: User[];
+  onDelete: (user: User) => void;
+  /** The row whose delete is in flight, if any. */
+  deletingId?: number | null;
+}
+
+export function UsersTable({ users, onDelete, deletingId }: UsersTableProps) {
   // `useOptionalSession` rather than `useSession`: the table is under
   // `AuthGuard`, so a user is guaranteed in practice, but nothing here breaks
   // without one — the marker simply does not render.
   const signedInId = useOptionalSession()?.id;
 
   return (
-    <Card className="overflow-hidden">
-      <Table>
+    // No `Card` of its own: the page wraps the search field, this table and
+    // the pagination in one shell, the way the roles list does.
+    <div className="overflow-hidden">
+      <Table className={TABLE_DENSITY}>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>User</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Roles</TableHead>
-            <TableHead>Status</TableHead>
+          <TableRow className="bg-card hover:bg-transparent">
+            <TableHead className="w-12 sm:w-16">User</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
+            <TableHead className="hidden lg:table-cell">Phone</TableHead>
+            <TableHead className="hidden sm:table-cell">Status</TableHead>
+            <TableHead className={cn("text-right", STICKY_ACTIONS)}>
+              Action
+            </TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
+          {users.length === 0 ? (
+            <TableEmpty colSpan={COLUMNS}>No users match your search.</TableEmpty>
+          ) : null}
+
           {users.map((user) => (
-            <TableRow key={user.id}>
+            <TableRow
+              key={user.id}
+              // `bg-card` so the pinned action cell has something opaque to
+              // inherit — without it the scrolled rows show through.
+              className={cn("bg-card", deletingId === user.id && "opacity-50")}
+            >
               <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    {user.image_thumbnail ? (
-                      <AvatarImage src={user.image_thumbnail} alt="" />
-                    ) : null}
-                    <AvatarFallback>{initials(user)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
-                      {displayName(user)}
-                      {user.id === signedInId ? (
-                        <>
-                          {/* Decorative on its own — the `sr-only` text is what
-                              carries the meaning, since an asterisk read aloud
-                              as "star" says nothing about whose row this is. */}
-                          <span
-                            aria-hidden
-                            className="ml-1 font-semibold text-primary"
-                          >
-                            *
-                          </span>
-                          <span className="sr-only"> (you)</span>
-                        </>
-                      ) : null}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </div>
+                <UserAvatar user={user} />
               </TableCell>
 
-              <TableCell className="whitespace-nowrap text-muted-foreground">
+              <TableCell className="max-w-34 sm:max-w-xs">
+                <p className="truncate font-medium text-foreground">
+                  {displayName(user)}
+                  {user.id === signedInId ? (
+                    <>
+                      {/* Decorative on its own — the `sr-only` text is what
+                          carries the meaning, since an asterisk read aloud as
+                          "star" says nothing about whose row this is. */}
+                      <span aria-hidden className="ml-1 font-semibold text-primary">
+                        *
+                      </span>
+                      <span className="sr-only"> (you)</span>
+                    </>
+                  ) : null}
+                </p>
+
+                {/* Carries the dropped columns on small screens. */}
+                <p className="truncate text-xs text-muted-foreground md:hidden">
+                  {user.email}
+                </p>
+                {/* The avatar's dot is the status signal at this width, and
+                    colour cannot carry it alone. Only the exceptional state is
+                    worth the words — an active user just gets the dot. */}
+                {isDisabled(user) ? (
+                  <span className="mt-1.5 block text-xs font-medium text-destructive sm:hidden">
+                    Disabled
+                  </span>
+                ) : null}
+              </TableCell>
+
+              <TableCell className="hidden max-w-64 md:table-cell">
+                <a
+                  href={`mailto:${user.email}`}
+                  className="block truncate text-muted-foreground hover:text-primary hover:underline"
+                >
+                  {user.email}
+                </a>
+              </TableCell>
+
+              <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
                 {user.phone?.trim() ? (
                   user.phone
                 ) : (
@@ -92,51 +149,22 @@ export function UsersTable({ users }: { users: User[] }) {
                 )}
               </TableCell>
 
-              <TableCell>
-                <RoleBadges roles={user.roles} />
+              <TableCell className="hidden sm:table-cell">
+                <UserStatusBadge user={user} />
               </TableCell>
 
-              <TableCell>
-                <StatusBadge user={user} />
+              <TableCell className={cn("w-px", STICKY_ACTIONS)}>
+                <UserRowActions
+                  user={user}
+                  onDelete={onDelete}
+                  deleting={deletingId === user.id}
+                />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </Card>
-  );
-}
-
-function RoleBadges({ roles }: { roles: Role[] | undefined }) {
-  if (!roles || roles.length === 0) {
-    return <span className="text-sm text-muted-foreground">No roles</span>;
-  }
-
-  const shown = roles.slice(0, VISIBLE_ROLES);
-  const remaining = roles.length - shown.length;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {shown.map((role) => (
-        <Badge key={role.id} variant="secondary">
-          {roleLabel(role)}
-        </Badge>
-      ))}
-      {remaining > 0 ? (
-        <Badge variant="outline">{`+${remaining}`}</Badge>
-      ) : null}
     </div>
-  );
-}
-
-/** Colour alone never carries the state — the word is the signal. */
-function StatusBadge({ user }: { user: User }) {
-  const off = isDisabled(user);
-
-  return (
-    <Badge variant={off ? "destructive" : "success"}>
-      {off ? "Disabled" : "Active"}
-    </Badge>
   );
 }
 
@@ -144,35 +172,44 @@ function StatusBadge({ user }: { user: User }) {
 export function UsersTableSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <Card className="overflow-hidden">
-      <Table>
+      <Table className={TABLE_DENSITY}>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>User</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Roles</TableHead>
-            <TableHead>Status</TableHead>
+          <TableRow className="bg-card hover:bg-transparent">
+            <TableHead className="w-12 sm:w-16">User</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
+            <TableHead className="hidden lg:table-cell">Phone</TableHead>
+            <TableHead className="hidden sm:table-cell">Status</TableHead>
+            <TableHead className={cn("text-right", STICKY_ACTIONS)}>
+              Action
+            </TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody aria-hidden>
           {Array.from({ length: rows }, (_, index) => (
-            <TableRow key={index} className="hover:bg-transparent">
+            <TableRow key={index} className="bg-card hover:bg-transparent">
               <TableCell>
-                <div className="flex items-center gap-3">
-                  <Skeleton className="size-9 rounded-full" />
-                  <div className="space-y-1.5">
-                    <Skeleton className="h-3.5 w-32" />
-                    <Skeleton className="h-3 w-44" />
-                  </div>
-                </div>
+                <Skeleton className="size-9 rounded-full" />
               </TableCell>
-              <TableCell>
+              <TableCell className="max-w-34 sm:max-w-xs">
+                <Skeleton className="h-3.5 w-32" />
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <Skeleton className="h-3.5 w-44" />
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <Skeleton className="h-3.5 w-24" />
               </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-28 rounded-full" />
-              </TableCell>
-              <TableCell>
+              <TableCell className="hidden sm:table-cell">
                 <Skeleton className="h-5 w-16 rounded-full" />
+              </TableCell>
+              <TableCell className={cn("w-px", STICKY_ACTIONS)}>
+                <div className="flex justify-end gap-0.5 sm:gap-1">
+                  <Skeleton className="size-9 rounded-md" />
+                  <Skeleton className="size-9 rounded-md" />
+                  <Skeleton className="size-9 rounded-md" />
+                </div>
               </TableCell>
             </TableRow>
           ))}
