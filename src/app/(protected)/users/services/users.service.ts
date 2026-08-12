@@ -1,3 +1,4 @@
+import { ApiError } from "@/shared/api/errors";
 import type { MutationResult } from "@/shared/api/http/create-client";
 import { privateApiClient } from "@/shared/api/private-client";
 import type { PageMeta } from "@/shared/api/types";
@@ -129,31 +130,25 @@ function readUser(raw: unknown): User | null {
   return null;
 }
 
-/** How wide a directory read goes when it is standing in for a by-id read. */
-const DIRECTORY_SAMPLE = 200;
-
 /**
  * One user, for the detail and edit pages.
  *
- * Read out of the **directory** rather than `GET /corporate/users/{id}`,
- * because only the list response carries `roles` — the by-id record omits
- * them, and roles are half of what those two pages exist to show.
+ * `GET /corporate/users/{id}` — one request, and it carries everything both
+ * pages need: the profile fields, `roles`, and each role's full `permissions`
+ * map. Verified against a live response.
  *
- * `/corporate/users/{id}` is still the fallback for an id past the sample
- * window: every field except roles is correct there, which beats telling a
- * real user they do not exist. Throws when neither path finds a record, which
- * is what the page turns into "User not found" — the same answer a deleted id,
- * a mistyped one, and another corporate's id all deserve.
+ * The record sits at `data.users` — plural key, single object, the same quirk
+ * `/corporate/roles/{id}` has. `readUser` looks there first.
+ *
+ * Throws when the id resolves to nothing, which the page turns into "User not
+ * found" — the same answer a deleted id, a mistyped one, and another
+ * corporate's id all deserve, since the API scopes reads to the caller's own
+ * corporate.
  */
 export async function fetchUser(
   userId: number,
   signal?: AbortSignal,
 ): Promise<User> {
-  const { items } = await listUsers({ perPage: DIRECTORY_SAMPLE, signal });
-
-  const listed = items.find((user) => user.id === userId);
-  if (listed) return listed;
-
   const raw = await privateApiClient.get<unknown>(`/corporate/users/${userId}`, {
     // The page renders its own not-found; the client's toast would double up.
     silent: true,
@@ -161,7 +156,7 @@ export async function fetchUser(
   });
 
   const user = readUser(raw);
-  if (!user) throw new Error("User not found");
+  if (!user) throw new ApiError(404, "User not found.", { payload: raw });
 
   return user;
 }

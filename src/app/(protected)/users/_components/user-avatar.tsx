@@ -6,6 +6,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/shared/components/ui/avatar";
+import { useFileUrl } from "@/shared/hooks/use-file-url";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -22,12 +23,14 @@ import { cn } from "@/shared/lib/utils";
 export function UserAvatar({ user }: { user: User }) {
   const off = isDisabled(user);
 
+  // `user.image_thumbnail` is an authenticated endpoint, not a file — see
+  // `useFileUrl`. Until it resolves, `src` is null and the initials show.
+  const { src } = useFileUrl(user.image_thumbnail ?? user.image);
+
   return (
     <span className="relative inline-flex">
       <Avatar>
-        {user.image_thumbnail ? (
-          <AvatarImage src={user.image_thumbnail} alt="" />
-        ) : null}
+        {src ? <AvatarImage src={src} alt="" /> : null}
         <AvatarFallback>{initials(user)}</AvatarFallback>
       </Avatar>
 

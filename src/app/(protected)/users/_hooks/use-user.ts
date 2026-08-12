@@ -20,5 +20,24 @@ export function useUser(id: number | undefined) {
     queryKey: ["users", "detail", id ?? 0],
     queryFn: ({ signal }) => fetchUser(id as number, signal),
     enabled: typeof id === "number" && Number.isFinite(id),
+
+    /**
+     * Always hit `GET /corporate/users/{id}` when one of these pages opens.
+     *
+     * The app-wide default is `staleTime: 60_000`, which is right for a list
+     * but wrong here: opening a user, going back, and opening them again
+     * inside a minute served the cache and fired no request at all. Someone
+     * clicking a row to *inspect* it is asking the server a question, and
+     * after an edit elsewhere the cached copy is exactly the wrong answer.
+     *
+     * `staleTime: 0` alone is not enough — it marks the data stale, and
+     * `refetchOnMount` then decides whether to act on it. Both, explicitly.
+     *
+     * Cached data still renders while the request is in flight, so this costs
+     * a background call, not a spinner: the pages branch on `isLoading`, which
+     * is only true when there is nothing to show yet.
+     */
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

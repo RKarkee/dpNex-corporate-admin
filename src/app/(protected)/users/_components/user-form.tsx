@@ -11,6 +11,7 @@ import type { User, YesNo } from "@/shared/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useFileUrl } from "@/shared/hooks/use-file-url";
 
 import {
   FormField,
@@ -123,6 +124,12 @@ export function UserForm({
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
 
   const roles = useQuery(rolesQuery);
+
+  // The record stores an authenticated endpoint, not a file. Resolved here
+  // rather than inside the field, whose job is preview and blob lifetime —
+  // by the time it arrives it is an ordinary URL, which is what that
+  // component already knows how to handle.
+  const { src: storedPhoto } = useFileUrl(user?.image ?? user?.image_thumbnail);
 
   /**
    * Seed from the loaded record exactly once per user id. Syncing on every
@@ -306,7 +313,7 @@ export function UserForm({
             onChange={setImage}
             disabled={submitting}
             error={fieldError("image")}
-            initialPreviewUrl={user?.image ?? user?.image_thumbnail ?? null}
+            initialPreviewUrl={storedPhoto}
           />
         </FormSection>
       </Card>

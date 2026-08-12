@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 import type { PageMeta } from "@/shared/api/types";
 import { Button } from "@/shared/components/ui/button";
@@ -60,17 +65,17 @@ export function Pagination({
   disabled = false,
   className,
 }: PaginationProps) {
-  if (!meta || meta.pageCount <= 1) {
-    // Still render the count — "Showing 1 to 2 of 2" is useful on one page too.
-    if (!meta || meta.total === 0) return null;
+  // Nothing to page through and nothing to count.
+  if (!meta || meta.total === 0) return null;
 
-    return (
-      <div className={cn("px-1 py-3 text-sm text-muted-foreground", className)}>
-        <ResultRange meta={meta} />
-      </div>
-    );
-  }
-
+  /**
+   * The controls render on a single page too, disabled at both ends.
+   *
+   * Hiding them below two pages meant a short list showed no pagination at
+   * all — which reads as "this feature is missing" rather than "you are on
+   * the only page". It also made the footer jump in and out of existence as a
+   * search narrowed the result set.
+   */
   const pages = pageWindow(meta.page, meta.pageCount);
 
   return (
@@ -87,12 +92,27 @@ export function Pagination({
       </p>
 
       <div className="flex items-center gap-1">
+        {/* Jump to the ends. Without these, coming back from page 9 is eight
+            clicks — and the numbered buttons that would have made it one are
+            hidden on a phone. */}
+        <Button
+          variant="outline"
+          size="icon-sm"
+          onClick={() => onPageChange(1)}
+          disabled={meta.page <= 1}
+          aria-label="First page"
+          title="First page"
+        >
+          <ChevronsLeft className="size-4" />
+        </Button>
+
         <Button
           variant="outline"
           size="icon-sm"
           onClick={() => onPageChange(meta.page - 1)}
           disabled={meta.page <= 1}
           aria-label="Previous page"
+          title="Previous page"
         >
           <ChevronLeft className="size-4" />
         </Button>
@@ -141,8 +161,20 @@ export function Pagination({
           onClick={() => onPageChange(meta.page + 1)}
           disabled={meta.page >= meta.pageCount}
           aria-label="Next page"
+          title="Next page"
         >
           <ChevronRight className="size-4" />
+        </Button>
+
+        <Button
+          variant="outline"
+          size="icon-sm"
+          onClick={() => onPageChange(meta.pageCount)}
+          disabled={meta.page >= meta.pageCount}
+          aria-label="Last page"
+          title="Last page"
+        >
+          <ChevronsRight className="size-4" />
         </Button>
       </div>
     </nav>

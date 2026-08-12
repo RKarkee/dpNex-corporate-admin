@@ -16,18 +16,21 @@ import {
 import { cn } from "@/shared/lib/utils";
 
 import { UserAvatar } from "./user-avatar";
-import { UserRoleBadges } from "./user-role-badges";
 import { UserRowActions } from "./user-row-actions";
 import { UserStatusBadge } from "./user-status-badge";
 
 /**
  * The directory table.
  *
- * Seven columns do not fit a phone, and sideways scrolling would push the
- * actions — the thing people came for — off screen. So Email, Phone, Role and
- * Status drop out below their breakpoints and restack under the name instead,
- * where nothing is lost. Status restacks as the dot on the avatar, plus the
- * word when someone is disabled.
+ * Six columns do not fit a phone, and sideways scrolling would push the
+ * actions — the thing people came for — off screen. So Email, Phone and Status
+ * drop out below their breakpoints and restack under the name instead, where
+ * nothing is lost. Status restacks as the dot on the avatar, plus the word
+ * when someone is disabled.
+ *
+ * Roles are deliberately not a column: a person can hold several, which makes
+ * the cell either a wrapping pile of badges or a `+N` that answers nothing.
+ * The detail page lists them in full, with the permissions each one grants.
  */
 /**
  * Tighter gutters below `sm`, so the three visible columns fit a 375px screen
@@ -48,7 +51,7 @@ const STICKY_ACTIONS =
   "sticky right-0 border-l border-border/70 bg-inherit sm:static sm:border-l-0";
 
 /** For the `colSpan` of the "no results" row. */
-const COLUMNS = 7;
+const COLUMNS = 6;
 
 export interface UsersTableProps {
   users: User[];
@@ -74,7 +77,6 @@ export function UsersTable({ users, onDelete, deletingId }: UsersTableProps) {
             <TableHead>Name</TableHead>
             <TableHead className="hidden md:table-cell">Email</TableHead>
             <TableHead className="hidden lg:table-cell">Phone</TableHead>
-            <TableHead className="hidden sm:table-cell">Role</TableHead>
             <TableHead className="hidden sm:table-cell">Status</TableHead>
             <TableHead className={cn("text-right", STICKY_ACTIONS)}>
               Action
@@ -118,17 +120,14 @@ export function UsersTable({ users, onDelete, deletingId }: UsersTableProps) {
                 <p className="truncate text-xs text-muted-foreground md:hidden">
                   {user.email}
                 </p>
-                <span className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
-                  <UserRoleBadges roles={user.roles} />
-                  {/* The avatar's dot is the status signal at this width, and
-                      colour cannot carry it alone. Only the exceptional state
-                      is worth the words — an active user just gets the dot. */}
-                  {isDisabled(user) ? (
-                    <span className="text-xs font-medium text-destructive">
-                      Disabled
-                    </span>
-                  ) : null}
-                </span>
+                {/* The avatar's dot is the status signal at this width, and
+                    colour cannot carry it alone. Only the exceptional state is
+                    worth the words — an active user just gets the dot. */}
+                {isDisabled(user) ? (
+                  <span className="mt-1.5 block text-xs font-medium text-destructive sm:hidden">
+                    Disabled
+                  </span>
+                ) : null}
               </TableCell>
 
               <TableCell className="hidden max-w-64 md:table-cell">
@@ -148,10 +147,6 @@ export function UsersTable({ users, onDelete, deletingId }: UsersTableProps) {
                   // noise to a screen reader, so name the absence instead.
                   <span aria-label="No phone number">—</span>
                 )}
-              </TableCell>
-
-              <TableCell className="hidden sm:table-cell">
-                <UserRoleBadges roles={user.roles} />
               </TableCell>
 
               <TableCell className="hidden sm:table-cell">
@@ -184,7 +179,6 @@ export function UsersTableSkeleton({ rows = 6 }: { rows?: number }) {
             <TableHead>Name</TableHead>
             <TableHead className="hidden md:table-cell">Email</TableHead>
             <TableHead className="hidden lg:table-cell">Phone</TableHead>
-            <TableHead className="hidden sm:table-cell">Role</TableHead>
             <TableHead className="hidden sm:table-cell">Status</TableHead>
             <TableHead className={cn("text-right", STICKY_ACTIONS)}>
               Action
@@ -206,9 +200,6 @@ export function UsersTableSkeleton({ rows = 6 }: { rows?: number }) {
               </TableCell>
               <TableCell className="hidden lg:table-cell">
                 <Skeleton className="h-3.5 w-24" />
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                <Skeleton className="h-5 w-28 rounded-full" />
               </TableCell>
               <TableCell className="hidden sm:table-cell">
                 <Skeleton className="h-5 w-16 rounded-full" />

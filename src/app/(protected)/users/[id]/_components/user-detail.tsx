@@ -7,7 +7,6 @@ import {
   displayName,
   initials,
   isDisabled,
-  roleLabel,
   type User,
 } from "@/shared/auth/types";
 import {
@@ -18,8 +17,10 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useFileUrl } from "@/shared/hooks/use-file-url";
 
 import { UserStatusBadge } from "../../_components/user-status-badge";
+import { UserRolePermissions } from "./user-role-permissions";
 
 /**
  * Everything the directory row could not fit: the person's card on the left,
@@ -31,8 +32,11 @@ import { UserStatusBadge } from "../../_components/user-status-badge";
  */
 export function UserDetail({ user }: { user: User }) {
   const name = displayName(user);
-  const photo = user.image ?? user.image_thumbnail;
   const roles = user.roles ?? [];
+
+  // The stored value is an authenticated endpoint, not a file — `useFileUrl`
+  // calls it and returns the URL an `<img>` can actually load.
+  const { src: photo } = useFileUrl(user.image ?? user.image_thumbnail);
 
   return (
     <div className="grid gap-5 lg:grid-cols-3">
@@ -73,36 +77,25 @@ export function UserDetail({ user }: { user: User }) {
           </Section>
 
           <Section title="Account information">
-            {/* Not a `Field`: that renders its value in a `<p>`, and a row of
-                badges is not a paragraph. The account type is deliberately
-                absent — the badge under the avatar already carries it. */}
-            <div className="space-y-1">
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Briefcase aria-hidden className="size-4" />
-                Roles and permissions
-              </span>
-              {roles.length === 0 ? (
-                <p className="font-medium text-muted-foreground">
-                  No roles assigned
-                </p>
-              ) : (
-                // Every role, not the table's `+N` collapse — this is the page
-                // someone opens precisely to see the full list.
-                <div className="flex flex-wrap gap-2 pt-0.5">
-                  {roles.map((role) => (
-                    <Badge key={role.id} variant="outline" className="gap-1.5">
-                      <Briefcase aria-hidden className="size-3" />
-                      {roleLabel(role)}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <Field icon={ShieldCheck} label="Status">
               {isDisabled(user) ? "Disabled" : "Active"}
             </Field>
+            <Field icon={Briefcase} label="Roles">
+              {roles.length === 0
+                ? "None assigned"
+                : `${roles.length} ${roles.length === 1 ? "role" : "roles"}`}
+            </Field>
           </Section>
+
+          {/*
+            Full width, outside the two-column `Section` grid: the roles carry
+            their permissions with them and a 90-item list does not belong in
+            a half-width column beside a phone number.
+          */}
+          <section>
+            <SectionHeading>Roles and permissions</SectionHeading>
+            <UserRolePermissions roles={roles} />
+          </section>
         </CardContent>
       </Card>
     </div>
