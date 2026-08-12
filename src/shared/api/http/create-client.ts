@@ -1,33 +1,33 @@
+import axios, {
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+} from "axios";
+
 import { REQUEST_TIMEOUT_MS } from "@/shared/config/env";
 
-import {
-  ApiError,
-  extractFieldErrors,
-  preferredMessage,
-} from "../errors";
+import { ApiError, extractFieldErrors, preferredMessage } from "../errors";
 import { normalizeMeta, unwrap } from "../unwrap";
-import { InterceptorManager } from "./interceptors";
 import type {
   ApiResponse,
-  ErrorInterceptor,
   HttpMethod,
   QueryParams,
   RequestConfig,
-  RequestInterceptor,
   RequestOptions,
-  ResponseInterceptor,
 } from "./types";
 
 /**
- * Builds an HTTP client with its own interceptor stack.
+ * Builds an HTTP client backed by an Axios instance.
  *
  * Two are created from this factory — `publicApiClient` and
- * `privateApiClient`. They differ only in base URL, credentials mode and which
- * interceptors are registered; everything below is shared.
+ * `privateApiClient`. They differ only in base URL, credentials mode and
+ * which interceptors are registered on the returned `axios` instance;
+ * everything below is shared.
  *
- * Why hand-rolled instead of axios: `fetch` is what Next.js instruments for
- * caching and what runs unchanged in the Edge runtime. axios pulls in an
- * XHR adapter that does neither, for an API surface we use maybe 5% of.
+ * The Axios instance is returned alongside `client`, never as part of it —
+ * `ApiClient` has no `.axios` field, so the raw transport cannot leak past
+ * `private-client.ts`/`public-client.ts`, which are the only other files
+ * that see this return value.
  */
 
 export interface ClientConfig {
@@ -35,7 +35,7 @@ export interface ClientConfig {
   name: string;
   /** Absolute (`https://api.dpnex.com/api/v1`) or same-origin (`/api/gateway`). */
   baseUrl: string;
-  /** `same-origin` sends the session cookie; `omit` keeps public calls anonymous. */
+  /** `same-origin`/`include` sends cookies; `omit` (both clients today) keeps calls anonymous. */
   credentials?: RequestCredentials;
   /** Applied to every request, overridable per call. */
   headers?: Record<string, string>;
@@ -53,113 +53,168 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   );
 }
 
-/** Bodies fetch already knows how to send are passed through untouched. */
-function isRawBody(value: unknown): value is BodyInit {
-  return (
-    typeof value === "string" ||
-    (typeof FormData !== "undefined" && value instanceof FormData) ||
-    (typeof Blob !== "undefined" && value instanceof Blob) ||
-    (typeof URLSearchParams !== "undefined" &&
-      value instanceof URLSearchParams) ||
-    (typeof ArrayBuffer !== "undefined" && value instanceof ArrayBuffer) ||
-    ArrayBuffer.isView(value as ArrayBufferView)
-  );
-}
-
-function appendParams(url: URL, params: QueryParams | undefined): void {
+function appendParams(search: URLSearchParams, params: QueryParams | undefined): void {
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value === undefined || value === null || value === "") continue;
 
     if (Array.isArray(value)) {
       // Laravel reads repeated `key[]` as an array.
-      for (const entry of value) url.searchParams.append(`${key}[]`, String(entry));
+      for (const entry of value) search.append(`${key}[]`, String(entry));
       continue;
     }
 
-    url.searchParams.append(key, String(value));
+    search.append(key, String(value));
   }
 }
 
-/** Same-origin bases need an origin to parse against; on the server there is none. */
-function resolveOrigin(): string {
-  if (typeof window !== "undefined") return window.location.origin;
-  return "http://localhost";
+/** Ports the old client's exact query-string shape rather than trusting Axios's own array serialization defaults. */
+function serializeParams(params: QueryParams | undefined): string {
+  const search = new URLSearchParams();
+  appendParams(search, params);
+  return search.toString();
 }
 
-function buildUrl(
-  baseUrl: string,
-  path: string,
-  params: QueryParams | undefined,
-): string {
-  const relative = !/^https?:\/\//i.test(baseUrl);
-  const origin = relative ? resolveOrigin() : undefined;
+function toPlainHeaders(headers: HeadersInit | undefined): Record<string, string> {
+  if (!headers) return {};
+  return Object.fromEntries(new Headers(headers).entries());
+}
 
-  const joined = `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
-  const url = origin ? new URL(joined, origin) : new URL(joined);
+function toFetchHeaders(headers: AxiosResponse["headers"]): Headers {
+  const result = new Headers();
+  const withToJSON = headers as { toJSON?: () => Record<string, string | string[] | undefined> };
+  const source =
+    typeof withToJSON.toJSON === "function"
+      ? withToJSON.toJSON()
+      : (headers as Record<string, string | string[] | undefined>);
 
-  appendParams(url, params);
+  for (const [key, value] of Object.entries(source)) {
+    if (value === undefined) continue;
+    result.set(key, Array.isArray(value) ? value.join(", ") : value);
+  }
 
-  // Same-origin clients keep the URL relative so nothing hardcodes a host.
-  return relative ? url.pathname + url.search : url.toString();
+  return result;
 }
 
 /**
- * Merges the caller's signal with our timeout, so whichever fires first wins.
- * Without this, a React Query cancellation would be ignored past the timeout.
+ * Reads the response body according to what the caller asked for.
+ *
+ * `responseType: "text"` is used at the transport level for both the default
+ * (JSON) and explicit "text" cases, which stops Axios attempting its own
+ * JSON parsing — its default silently falls back to a string on a parse
+ * failure, where this client throws, matching the old `parseBody()` exactly.
  */
-function withTimeout(
-  signal: AbortSignal | undefined,
-  timeout: number,
-): { signal: AbortSignal; dispose: () => void } {
-  const timeoutSignal = AbortSignal.timeout(timeout);
-  if (!signal) return { signal: timeoutSignal, dispose: () => {} };
-
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-
-  signal.addEventListener("abort", abort, { once: true });
-  timeoutSignal.addEventListener("abort", abort, { once: true });
-
-  return {
-    signal: controller.signal,
-    dispose: () => {
-      signal.removeEventListener("abort", abort);
-      timeoutSignal.removeEventListener("abort", abort);
-    },
-  };
-}
-
-async function parseBody(
-  response: Response,
-  responseType: RequestOptions["responseType"],
-): Promise<unknown> {
+function parseRaw(response: AxiosResponse, app: RequestOptions | undefined): unknown {
   if (response.status === 204 || response.status === 205) return undefined;
-  if (responseType === "blob") return response.blob();
-  if (responseType === "text") return response.text();
+  if (response.config.responseType === "blob") return response.data;
+  if (app?.responseType === "text") return response.data;
 
-  const text = await response.text();
+  const text = response.data as string;
   if (!text) return undefined;
 
   try {
     return JSON.parse(text) as unknown;
   } catch {
-    // An HTML error page or a PHP notice — surface it as a server error, not a
-    // parse crash, so the user sees copy instead of a stack trace.
+    // An HTML error page or a PHP notice — surface it as a server error, not
+    // a parse crash, so the user sees copy instead of a stack trace. `cause`
+    // carries the response (and its `config.app`) so a downstream interceptor
+    // can still read `silent`/`skipAuthRedirect` off this error.
     throw new ApiError(response.status || 502, "Unexpected response from the service.", {
       payload: text.slice(0, 300),
+      cause: response,
     });
   }
+}
+
+/** Peels the `{ status, message, data }` envelope when there is one. */
+function extractData(raw: unknown): unknown {
+  if (isPlainObject(raw) && "data" in raw && "status" in raw) return raw.data;
+  return raw;
+}
+
+/**
+ * The envelope's own `message`, if it is fit to show.
+ *
+ * Length-capped because a few endpoints put a stack trace or a paragraph of
+ * SQL in there on partial failures, and a toast is not the place for it.
+ */
+function extractMessage(raw: unknown): string | undefined {
+  if (!isPlainObject(raw) || typeof raw.message !== "string") return undefined;
+
+  const message = raw.message.trim();
+  return message && message.length <= 200 ? message : undefined;
+}
+
+function toApiResponse(response: AxiosResponse): ApiResponse {
+  const app = response.config.app;
+  const raw = parseRaw(response, app);
+  const data = app?.unwrap ? unwrap(raw, app.unwrap) : extractData(raw);
+
+  return {
+    data,
+    message: extractMessage(raw),
+    raw,
+    meta: normalizeMeta(raw),
+    status: response.status,
+    headers: toFetchHeaders(response.headers),
+    config: response.config,
+  };
+}
+
+/**
+ * Converts a rejected Axios call into the project's single thrown type.
+ *
+ * A caller-initiated abort (React Query cancellation) is rethrown exactly as
+ * Axios produced it — untouched — so React Query's own cancellation
+ * detection, which is signal-based rather than error-type-based, keeps
+ * telling a cancellation apart from a genuine network outage.
+ */
+function toApiError(error: unknown): unknown {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+
+  const app = error.config?.app;
+  if (app?.signal?.aborted || axios.isCancel(error)) return error;
+
+  if (error.code === "ECONNABORTED" && !error.response) {
+    return new ApiError(408, "The request took too long. Please try again.", { cause: error });
+  }
+
+  if (!error.response) {
+    return new ApiError(
+      0,
+      "Could not reach the service. Check your connection and try again.",
+      { cause: error },
+    );
+  }
+
+  // May itself throw ApiError(502-ish) for an unparseable body — propagates
+  // as-is, matching the old client's parse-before-status-check ordering.
+  const raw = parseRaw(error.response, app);
+  const { display, upstream } = preferredMessage(error.response.status, raw);
+
+  return new ApiError(error.response.status, display, {
+    payload: raw,
+    upstreamMessage: upstream,
+    fieldErrors: error.response.status === 422 ? extractFieldErrors(raw) : undefined,
+    cause: error,
+  });
+}
+
+/**
+ * Recovers the original per-call `RequestOptions` and request identity from a
+ * converted `ApiError`, for interceptors that only ever see the converted
+ * error (never the raw Axios shape) but still need `silent`/`skipAuthRedirect`
+ * or the method/URL for a dev-log line.
+ */
+export function requestConfigOf(error: unknown): RequestConfig | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  return (error.cause as { config?: RequestConfig } | undefined)?.config;
 }
 
 export interface ApiClient {
   readonly name: string;
   readonly baseUrl: string;
-
-  interceptors: {
-    request: InterceptorManager<RequestInterceptor>;
-    response: InterceptorManager<ResponseInterceptor>;
-    error: InterceptorManager<ErrorInterceptor>;
-  };
 
   /** Full response, for the rare caller that needs headers or `meta`. */
   request<T = unknown>(
@@ -204,155 +259,99 @@ export interface MutationResult<T = unknown> {
   status: number;
 }
 
-export function createApiClient(config: ClientConfig): ApiClient {
-  const interceptors = {
-    request: new InterceptorManager<RequestInterceptor>(),
-    response: new InterceptorManager<ResponseInterceptor>(),
-    error: new InterceptorManager<ErrorInterceptor>(),
-  };
+function shouldRetry(
+  error: unknown,
+  method: HttpMethod,
+  attempt: number,
+  retries: number | undefined,
+): boolean {
+  const max = retries ?? 0;
+  if (attempt >= max) return false;
+  if (method !== "GET") return false; // only GET is safe to repeat
+  if (!(error instanceof ApiError)) return false;
 
-  const defaultTimeout = config.timeout ?? REQUEST_TIMEOUT_MS;
+  return error.status === 0 || RETRYABLE_STATUSES.has(error.status);
+}
+
+export function createApiClient(config: ClientConfig): { client: ApiClient; axios: AxiosInstance } {
+  const axiosInstance = axios.create({
+    baseURL: config.baseUrl,
+    headers: { Accept: "application/json", ...config.headers },
+    timeout: config.timeout ?? REQUEST_TIMEOUT_MS,
+    withCredentials: config.credentials === "include" || config.credentials === "same-origin",
+    paramsSerializer: { serialize: serializeParams },
+  });
+
+  // Both registered first, so they run before any interceptor
+  // `private-client.ts`/`public-client.ts` add afterward — Axios response
+  // interceptors run in registration order (FIFO), so a downstream error
+  // interceptor (the 401 handler, the toast) always sees an already-converted
+  // `ApiError`, never a raw Axios shape.
+  //
+  // The full `ApiResponse` conversion happens in `rawRequest()` below, since
+  // Axios's own types don't let a response interceptor change the resolved
+  // shape — but a malformed body, or a body missing the key `unwrap` expects,
+  // still has to fail *inside* Axios's own promise chain (not after it, in
+  // `rawRequest`) for a downstream error interceptor to ever see it. So this
+  // pair validates eagerly — parsing the body and, when the caller asked for
+  // one, unwrapping the envelope key — purely to raise the same errors
+  // `toApiResponse()` would raise later, discarding the result here and
+  // letting the rejection carry through to the conversion interceptor below.
+  axiosInstance.interceptors.response.use((response) => {
+    const app = response.config.app;
+    const raw = parseRaw(response, app);
+
+    if (app?.unwrap) {
+      try {
+        unwrap(raw, app.unwrap);
+      } catch (unwrapError) {
+        // `unwrap()` itself carries no `cause` — rebuild the same error with
+        // one attached, so `requestConfigOf()` can still recover
+        // `silent`/`skipAuthRedirect` downstream. Same status/message/payload;
+        // only the transport-level `cause` is added.
+        if (unwrapError instanceof ApiError) {
+          throw new ApiError(unwrapError.status, unwrapError.message, {
+            payload: unwrapError.payload,
+            fieldErrors: unwrapError.fieldErrors,
+            upstreamMessage: unwrapError.upstreamMessage,
+            cause: response,
+          });
+        }
+        throw unwrapError;
+      }
+    }
+
+    return response;
+  });
+  axiosInstance.interceptors.response.use(undefined, (error: unknown) => {
+    throw toApiError(error);
+  });
 
   function buildConfig(
     method: HttpMethod,
     path: string,
     body: unknown,
     options: RequestOptions,
-    attempt: number,
-  ): RequestConfig {
-    const headers = new Headers({
-      Accept: "application/json",
-      ...config.headers,
-    });
-
-    for (const [key, value] of new Headers(options.headers ?? {})) {
-      headers.set(key, value);
-    }
-
-    let payload: BodyInit | null | undefined;
-
-    if (body !== undefined && body !== null && method !== "GET") {
-      if (isRawBody(body)) {
-        // Never set Content-Type for FormData — fetch must add the boundary.
-        payload = body;
-      } else {
-        payload = JSON.stringify(body);
-        if (!headers.has("Content-Type")) {
-          headers.set("Content-Type", "application/json");
-        }
-      }
-    }
-
+  ): AxiosRequestConfig {
     return {
-      ...options,
-      clientName: config.name,
-      url: buildUrl(config.baseUrl, path, options.params),
+      url: path,
       method,
-      headers,
-      body: payload,
-      attempt,
+      params: options.params,
+      headers: toPlainHeaders(options.headers),
+      data: method === "GET" ? undefined : body,
+      signal: options.signal,
+      timeout: options.timeout,
+      responseType: options.responseType === "blob" ? "blob" : "text",
+      app: options,
     };
   }
 
-  async function send(initial: RequestConfig): Promise<ApiResponse> {
-    let current = initial;
-
-    for (const interceptor of interceptors.request.list()) {
-      current = await interceptor(current);
-    }
-
-    const { signal, dispose } = withTimeout(
-      current.signal,
-      current.timeout ?? defaultTimeout,
-    );
-
-    let response: Response;
-    try {
-      response = await fetch(current.url, {
-        method: current.method,
-        headers: current.headers,
-        body: current.body,
-        credentials: config.credentials ?? "same-origin",
-        cache: "no-store",
-        signal,
-      });
-    } catch (error) {
-      // A caller-initiated abort is not a failure — let it propagate as-is so
-      // React Query can tell cancellation from a network outage.
-      if (current.signal?.aborted) throw error;
-
-      const timedOut =
-        error instanceof DOMException && error.name === "TimeoutError";
-
-      throw new ApiError(
-        timedOut ? 408 : 0,
-        timedOut
-          ? "The request took too long. Please try again."
-          : "Could not reach the service. Check your connection and try again.",
-        { cause: error },
-      );
-    } finally {
-      dispose();
-    }
-
-    const raw = await parseBody(response, current.responseType);
-
-    if (!response.ok) {
-      const { display, upstream } = preferredMessage(response.status, raw);
-
-      throw new ApiError(response.status, display, {
-        payload: raw,
-        upstreamMessage: upstream,
-        fieldErrors:
-          response.status === 422 ? extractFieldErrors(raw) : undefined,
-      });
-    }
-
-    const data = current.unwrap ? unwrap(raw, current.unwrap) : extractData(raw);
-
-    let result: ApiResponse = {
-      data,
-      message: extractMessage(raw),
-      raw,
-      meta: normalizeMeta(raw),
-      status: response.status,
-      headers: response.headers,
-      config: current,
-    };
-
-    for (const interceptor of interceptors.response.list()) {
-      result = await interceptor(result);
-    }
-
-    return result;
-  }
-
-  /** Peels the `{ status, message, data }` envelope when there is one. */
-  function extractData(raw: unknown): unknown {
-    if (isPlainObject(raw) && "data" in raw && "status" in raw) return raw.data;
-    return raw;
-  }
-
-  /**
-   * The envelope's own `message`, if it is fit to show.
-   *
-   * Length-capped because a few endpoints put a stack trace or a paragraph of
-   * SQL in there on partial failures, and a toast is not the place for it.
-   */
-  function extractMessage(raw: unknown): string | undefined {
-    if (!isPlainObject(raw) || typeof raw.message !== "string") return undefined;
-
-    const message = raw.message.trim();
-    return message && message.length <= 200 ? message : undefined;
-  }
-
-  function shouldRetry(error: unknown, cfg: RequestConfig): boolean {
-    const max = cfg.retries ?? 0;
-    if (cfg.attempt >= max) return false;
-    if (cfg.method !== "GET") return false; // only GET is safe to repeat
-    if (!(error instanceof ApiError)) return false;
-
-    return error.status === 0 || RETRYABLE_STATUSES.has(error.status);
+  async function rawRequest<T>(axiosConfig: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await axiosInstance.request<unknown>(axiosConfig);
+    // Same cast the old fetch-based client made at this exact boundary
+    // (`(await send(cfg)) as ApiResponse<T>`) — `data`'s real shape is only
+    // known to the caller, not to the client building it.
+    return toApiResponse(response) as ApiResponse<T>;
   }
 
   async function request<T>(
@@ -364,12 +363,10 @@ export function createApiClient(config: ClientConfig): ApiClient {
     let attempt = 0;
 
     for (;;) {
-      const cfg = buildConfig(method, path, body, options, attempt);
-
       try {
-        return (await send(cfg)) as ApiResponse<T>;
+        return await rawRequest<T>(buildConfig(method, path, body, options));
       } catch (error) {
-        if (shouldRetry(error, cfg)) {
+        if (shouldRetry(error, method, attempt, options.retries)) {
           attempt += 1;
           // Exponential backoff, capped — 300ms, 600ms, 1200ms…
           await new Promise((resolve) =>
@@ -378,25 +375,14 @@ export function createApiClient(config: ClientConfig): ApiClient {
           continue;
         }
 
-        // The error chain runs last. A handler may return a response to
-        // recover; anything it throws replaces the original error.
-        let recovered: ApiResponse | undefined;
-
-        for (const interceptor of interceptors.error.list()) {
-          recovered = await interceptor(error, cfg);
-          if (recovered) break;
-        }
-
-        if (recovered) return recovered as ApiResponse<T>;
         throw error;
       }
     }
   }
 
-  return {
+  const client: ApiClient = {
     name: config.name,
     baseUrl: config.baseUrl,
-    interceptors,
     request,
 
     async get<T>(path: string, options?: RequestOptions) {
@@ -437,4 +423,6 @@ export function createApiClient(config: ClientConfig): ApiClient {
       };
     },
   };
+
+  return { client, axios: axiosInstance };
 }

@@ -1,6 +1,8 @@
+import type { AxiosResponse } from "axios";
+
 import { IS_DEV } from "@/shared/config/env";
 
-import type { ApiResponse, RequestConfig } from "./types";
+import type { RequestConfig } from "./types";
 
 /**
  * Development-only request logging.
@@ -23,7 +25,7 @@ export function logRequest(config: RequestConfig): void {
   );
 }
 
-export function logResponse(response: ApiResponse): void {
+export function logResponse(response: AxiosResponse): void {
   const start = started.get(response.config);
   const ms = start ? Math.round(performance.now() - start) : undefined;
 
@@ -35,8 +37,8 @@ export function logResponse(response: ApiResponse): void {
   );
 }
 
-export function logError(config: RequestConfig, error: unknown): void {
-  if (!IS_DEV_LOGGING) return;
+export function logError(config: RequestConfig | undefined, error: unknown): void {
+  if (!IS_DEV_LOGGING || !config) return;
   console.debug(
     `%c✕ ${config.method} %c${config.url}`,
     "color:#b3261e;font-weight:600",

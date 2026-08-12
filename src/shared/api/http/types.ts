@@ -1,3 +1,5 @@
+import type { InternalAxiosRequestConfig } from "axios";
+
 import type { PageMeta } from "../types";
 
 /** The shapes the client and its interceptors pass around. */
@@ -42,20 +44,26 @@ export interface RequestOptions {
   meta?: Record<string, unknown>;
 }
 
-/** A fully-resolved request. Request interceptors receive and may mutate this. */
-export interface RequestConfig extends RequestOptions {
-  /** Client id, so a shared interceptor can tell public from private. */
-  clientName: string;
-  /** Absolute or same-origin URL, already built from baseUrl + path + params. */
-  url: string;
-  method: HttpMethod;
-  headers: Headers;
-  body?: BodyInit | null;
-  /** Bookkeeping for `retries`; do not set by hand. */
-  attempt: number;
+/**
+ * Axios's own request config, carrying exactly one application-specific seam:
+ * the original `RequestOptions` a service passed in, for interceptors and the
+ * retry loop to read back (`config.app?.silent`, etc.). Everything else on
+ * this type is pure Axios transport config — application config never bleeds
+ * into the rest of Axios's own namespace.
+ */
+declare module "axios" {
+  interface AxiosRequestConfig {
+    app?: RequestOptions;
+  }
+  interface InternalAxiosRequestConfig {
+    app?: RequestOptions;
+  }
 }
 
-/** What response interceptors receive. */
+/** A fully-resolved request, as seen by our own conversion logic and the logger. */
+export type RequestConfig = InternalAxiosRequestConfig;
+
+/** What response interceptors and callers receive. */
 export interface ApiResponse<T = unknown> {
   /** Post-unwrap payload — what the caller ultimately gets. */
   data: T;
@@ -75,20 +83,3 @@ export interface ApiResponse<T = unknown> {
   headers: Headers;
   config: RequestConfig;
 }
-
-export type RequestInterceptor = (
-  config: RequestConfig,
-) => RequestConfig | Promise<RequestConfig>;
-
-export type ResponseInterceptor = (
-  response: ApiResponse,
-) => ApiResponse | Promise<ApiResponse>;
-
-/**
- * Return a value to recover (it becomes the response); throw to keep the
- * request failing. This is the hook a token-refresh retry would use.
- */
-export type ErrorInterceptor = (
-  error: unknown,
-  config: RequestConfig,
-) => ApiResponse | Promise<ApiResponse> | never;
