@@ -156,7 +156,7 @@ export function RequestsView() {
             <RequestsTable
               requests={items}
               onDelete={setPendingDelete}
-              canUpdate={canCreate}
+              canUpdate={canUpdate}
               canDelete={canDelete}
               deletingId={
                 deleteRequest.isPending ? (deleteRequest.variables ?? null) : null

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
@@ -83,9 +84,13 @@ export function UserMenu() {
             </p>
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <UserIcon />
-            Profile
+          {/* `asChild` + `Link` rather than `router.push`, so it is a real
+              anchor — middle-click and "open in new tab" both work. */}
+          <DropdownMenuItem asChild>
+            <Link href="/profile">
+              <UserIcon />
+              Profile
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Settings />
