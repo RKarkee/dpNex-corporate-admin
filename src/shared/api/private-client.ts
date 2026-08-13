@@ -3,7 +3,7 @@ import { toast } from "@/shared/components/toast/toast";
 import { API_BASE_URL } from "@/shared/config/env";
 
 import { ApiError } from "./errors";
-import { createApiClient } from "./http/create-client";
+import { createApiClient, requestConfigOf } from "./http/create-client";
 import { IS_DEV_LOGGING, logError, logRequest, logResponse } from "./http/logger";
 
 /**
@@ -18,8 +18,12 @@ import { IS_DEV_LOGGING, logError, logRequest, logResponse } from "./http/logger
  *
  * Both headers are attached by the interceptors below, reading from
  * `useAuthStore`. Services never touch the token.
+ *
+ * `axios` (the raw instance) is destructured only to register interceptors
+ * on it, then never referenced again — it is not exported from this module,
+ * so nothing outside this file can reach it.
  */
-export const privateApiClient = createApiClient({
+const { client, axios } = createApiClient({
   name: "private",
   baseUrl: API_BASE_URL,
   // The API authenticates by bearer token, not by cookie. Sending credentials
@@ -28,12 +32,14 @@ export const privateApiClient = createApiClient({
   credentials: "omit",
 });
 
+export const privateApiClient = client;
+
 /* -------------------------------------------------------------------------- */
 /* Request interceptors — run in registration order.                          */
 /* -------------------------------------------------------------------------- */
 
 /** The token, on every request. */
-privateApiClient.interceptors.request.use((config) => {
+axios.interceptors.request.use((config) => {
   const token = getAuthToken();
 
   // Not thrown on: a missing token means the session lapsed, and the 401 path
@@ -47,7 +53,7 @@ privateApiClient.interceptors.request.use((config) => {
 });
 
 /** Corporate scope. The API rejects every `/corporate/*` route without it. */
-privateApiClient.interceptors.request.use((config) => {
+axios.interceptors.request.use((config) => {
   const code = getActiveCorporateCode();
   if (code && !config.headers.has("X-Corporate-Code")) {
     config.headers.set("X-Corporate-Code", code);
@@ -56,12 +62,12 @@ privateApiClient.interceptors.request.use((config) => {
 });
 
 if (IS_DEV_LOGGING) {
-  privateApiClient.interceptors.request.use((config) => {
+  axios.interceptors.request.use((config) => {
     logRequest(config);
     return config;
   });
 
-  privateApiClient.interceptors.response.use((response) => {
+  axios.interceptors.response.use((response) => {
     logResponse(response);
     return response;
   });
@@ -102,18 +108,22 @@ async function abandonSession(): Promise<void> {
   }, 1_000);
 }
 
-privateApiClient.interceptors.error.use((error, config) => {
-  logError(config, error);
+axios.interceptors.response.use(undefined, (error: unknown) => {
+  // This runs after `create-client.ts`'s own conversion interceptor (Axios
+  // response interceptors run in registration order), so `error` here is
+  // always an `ApiError` — never a raw `AxiosError`.
+  const requestConfig = requestConfigOf(error);
+  logError(requestConfig, error);
 
   if (!(error instanceof ApiError)) throw error;
 
-  if (error.isUnauthorized && !config.skipAuthRedirect) {
+  if (error.isUnauthorized && !requestConfig?.app?.skipAuthRedirect) {
     toast.error("Your session has ended. Please sign in again.");
     void abandonSession();
     throw error;
   }
 
-  if (!config.silent && !error.isValidationError) {
+  if (!requestConfig?.app?.silent && !error.isValidationError) {
     toast.error(error.message);
   }
 

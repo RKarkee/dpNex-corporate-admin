@@ -101,7 +101,9 @@ export const useAuthStore = create<AuthState>()(
           : SESSION_MAX_AGE_SECONDS;
 
         const activeCorporateCode =
-          session.activeCorporateCode ?? session.corporates[0]?.corp_code ?? null;
+          session.activeCorporateCode ??
+          session.corporates[0]?.corp_code ??
+          null;
 
         // Written before the state lands, so a navigation triggered by the
         // state change already sees the cookie.
@@ -146,7 +148,8 @@ export const useAuthStore = create<AuthState>()(
 
           return {
             corporates: next,
-            activeCorporateCode: state.activeCorporateCode ?? corporate.corp_code,
+            activeCorporateCode:
+              state.activeCorporateCode ?? corporate.corp_code,
           };
         }),
 

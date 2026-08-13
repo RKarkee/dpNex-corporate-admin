@@ -7,17 +7,13 @@ export { privateApiClient } from "./private-client";
 export { publicApiClient } from "./public-client";
 
 export { createApiClient, type ApiClient, type ClientConfig } from "./http/create-client";
-export { InterceptorManager } from "./http/interceptors";
 
 export type {
   ApiResponse,
-  ErrorInterceptor,
   HttpMethod,
   QueryParams,
   RequestConfig,
-  RequestInterceptor,
   RequestOptions,
-  ResponseInterceptor,
 } from "./http/types";
 
 export {
