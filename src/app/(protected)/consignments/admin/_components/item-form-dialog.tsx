@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
+import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import { useBoxItem, useSaveItem } from "../_hooks/use-consignment-boxes";
@@ -101,6 +102,21 @@ export function ItemFormDialog({
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
+  /**
+   * Names for the four codes the record stores.
+   *
+   * The form's own `*_label` wins when it is set, because that only happens
+   * when the user picked an option and the label came back with it. Otherwise
+   * these fill in what the detail response could not — it returns codes only.
+   */
+  const resolvedHsCode = useLookupLabel("hsCode", form.item_hs_code);
+  const resolvedMaterial = useLookupLabel("material", form.item_material);
+  const resolvedManufacturer = useLookupLabel(
+    "manufacturer",
+    form.item_manufacturer,
+  );
+  const resolvedCurrency = useLookupLabel("currency", form.item_currency);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -134,11 +150,14 @@ export function ItemFormDialog({
     setForm({
       item_name: text(record.item_name),
       item_hs_code: text(record.item_hs_code),
-      item_hs_code_label: text(record.item_hs_code),
+      // The `*_label` fields are left blank on purpose: `useLookupLabel` turns
+      // each stored code into its name. Seeding them with the code would win
+      // over the resolved label and pin every trigger to the raw value.
+      item_hs_code_label: "",
       item_material: text(record.item_material),
-      item_material_label: text(record.item_material),
+      item_material_label: "",
       item_manufacturer: text(record.item_manufacturer),
-      item_manufacturer_label: text(record.item_manufacturer),
+      item_manufacturer_label: "",
       item_gender: text(record.item_gender),
       // Read as `item_quantity`, written back as `quantity`.
       quantity: text(record.item_quantity),
@@ -146,7 +165,7 @@ export function ItemFormDialog({
       item_rate: text(record.item_rate),
       item_total_amount: text(record.item_total_amount),
       item_currency: text(record.item_currency) || DEFAULT_CURRENCY,
-      item_currency_label: text(record.item_currency) || DEFAULT_CURRENCY,
+      item_currency_label: "",
     });
   }, [open, isEdit, itemId, item.data]);
 
@@ -240,7 +259,7 @@ export function ItemFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.item_hs_code}
-                    selectedLabel={form.item_hs_code_label}
+                    selectedLabel={form.item_hs_code_label || resolvedHsCode}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
@@ -260,7 +279,7 @@ export function ItemFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.item_material}
-                    selectedLabel={form.item_material_label}
+                    selectedLabel={form.item_material_label || resolvedMaterial}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
@@ -280,7 +299,7 @@ export function ItemFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.item_manufacturer}
-                    selectedLabel={form.item_manufacturer_label}
+                    selectedLabel={form.item_manufacturer_label || resolvedManufacturer}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
@@ -387,7 +406,7 @@ export function ItemFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.item_currency}
-                    selectedLabel={form.item_currency_label}
+                    selectedLabel={form.item_currency_label || resolvedCurrency}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,

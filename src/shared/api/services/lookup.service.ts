@@ -127,3 +127,92 @@ export function fetchCurrencies(page: number, perPage: number, query?: string) {
 export function fetchManufacturers(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.manufacturers, page, perPage, query, "q");
 }
+
+/* -------------------------------------------------------------------------- */
+/* Resolving one stored code to its label                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The lists a stored code can belong to.
+ *
+ * Records keep codes — `8517.12`, `USD` — because that is what the API accepts.
+ * Every screen that shows one has to turn it back into a name, which is what
+ * the rest of this section is for.
+ */
+export type LookupKind =
+  | "packageType"
+  | "material"
+  | "hsCode"
+  | "currency"
+  | "manufacturer";
+
+const FETCHERS: Record<
+  LookupKind,
+  (page: number, perPage: number, query?: string) => Promise<LookupListResult>
+> = {
+  packageType: fetchPackageTypes,
+  material: fetchMaterials,
+  hsCode: fetchHsCodes,
+  currency: fetchCurrencies,
+  manufacturer: fetchManufacturers,
+};
+
+const RESOLVE_PAGE_SIZE = 20;
+
+/**
+ * Codes are immutable, so a resolved label never goes stale.
+ *
+ * Module-level rather than per-call: a consignment with thirty items repeats
+ * the same handful of currencies and HS codes, and every dialog that opens
+ * afterwards asks for the same ones again. Promises are cached rather than
+ * values, so twenty simultaneous callers for one code share a single request.
+ *
+ * Bounded in practice by the number of distinct codes a session actually looks
+ * at — a few hundred strings at worst.
+ */
+const labelCache = new Map<string, Promise<string>>();
+
+/**
+ * One stored code, as the name a person should read.
+ *
+ * Searches by the code first — the fastest path when the endpoint indexes it —
+ * then falls back to scanning the unfiltered first page, and finally to the
+ * code itself. Showing `8517.12` is a worse answer than "Mobile phones" but a
+ * far better one than an empty field, so this never rejects and never returns
+ * an empty string for a non-empty code.
+ */
+export function resolveLookupLabel(
+  kind: LookupKind,
+  code: string | undefined | null,
+): Promise<string> {
+  const value = String(code ?? "").trim();
+  if (!value) return Promise.resolve("");
+
+  const key = `${kind}:${value}`;
+  const cached = labelCache.get(key);
+  if (cached) return cached;
+
+  const pending = (async () => {
+    const fetchPage = FETCHERS[kind];
+
+    try {
+      const searched = await fetchPage(1, RESOLVE_PAGE_SIZE, value);
+      const hit = searched.data.find((option) => String(option.value) === value);
+      if (hit) return hit.label;
+
+      const firstPage = await fetchPage(1, RESOLVE_PAGE_SIZE);
+      const fallback = firstPage.data.find(
+        (option) => String(option.value) === value,
+      );
+      return fallback?.label ?? value;
+    } catch {
+      // A failed lookup must not be cached as a permanent answer — drop it so
+      // the next caller retries rather than being stuck with the code forever.
+      labelCache.delete(key);
+      return value;
+    }
+  })();
+
+  labelCache.set(key, pending);
+  return pending;
+}

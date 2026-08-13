@@ -1,9 +1,4 @@
-import {
-  fetchCurrencies,
-  fetchHsCodes,
-  fetchManufacturers,
-  fetchMaterials,
-} from "@/shared/api/services/lookup.service";
+import { resolveLookupLabel } from "@/shared/api/services/lookup.service";
 
 import { newBoxDefaults, type ConsignmentAdminFormValues } from "./schema";
 import type {
@@ -369,68 +364,16 @@ export function mapDetailToFormValues(
 /* Lookup label resolution                                                    */
 /* -------------------------------------------------------------------------- */
 
-const LOOKUP_PAGE_SIZE = 20;
-
 /**
  * How long the edit form waits for prettier labels before opening anyway.
  *
- * Every field already holds its code as a stand-in label, so the deadline is
- * the difference between "8517.12" and "Mobile phones" — never between a usable
+ * Every field already holds its code as a stand-in, so the deadline is the
+ * difference between "8517.12" and "Mobile phones" — never between a usable
  * form and an empty one. Blocking on a slow lookup endpoint would leave someone
  * staring at a skeleton for the full request timeout when the record itself
  * arrived long ago.
  */
 const LABEL_RESOLVE_TIMEOUT_MS = 4_000;
-
-type LookupFetcher = (
-  page: number,
-  perPage: number,
-  query?: string,
-) => Promise<{ data: { value: string | number; label: string }[] }>;
-
-/**
- * Turns one stored code into its readable label.
- *
- * Searches by the code first — the fastest path when the endpoint indexes it —
- * then falls back to scanning the unfiltered first page, then to the code
- * itself. Showing the code is a worse answer than the name but a much better
- * one than an empty field.
- *
- * Cached per `(kind, code)` for the lifetime of one resolve pass, so a currency
- * repeated across thirty items costs one request, not thirty.
- */
-async function resolveLabel(
-  fetcher: LookupFetcher,
-  kind: string,
-  code: string | undefined,
-  cache: Map<string, Promise<string>>,
-): Promise<string> {
-  const value = code?.trim();
-  if (!value) return "";
-
-  const key = `${kind}:${value}`;
-  const cached = cache.get(key);
-  if (cached) return cached;
-
-  const pending = (async () => {
-    try {
-      const searched = await fetcher(1, LOOKUP_PAGE_SIZE, value);
-      const hit = searched.data.find((option) => String(option.value) === value);
-      if (hit) return hit.label;
-
-      const firstPage = await fetcher(1, LOOKUP_PAGE_SIZE);
-      const fallback = firstPage.data.find(
-        (option) => String(option.value) === value,
-      );
-      return fallback?.label ?? value;
-    } catch {
-      return value;
-    }
-  })();
-
-  cache.set(key, pending);
-  return pending;
-}
 
 /**
  * Fills in the display labels for every async-lookup field on a seeded form.
@@ -439,53 +382,50 @@ async function resolveLabel(
  * requests go out together, and the batch is capped by a deadline — after which
  * whatever resolved is kept and the rest stay as codes.
  *
+ * The per-code work lives in `resolveLookupLabel`, which memoises by
+ * `(kind, code)` process-wide. So a currency repeated across thirty items costs
+ * one request, and the box/item dialogs that resolve the same codes later pay
+ * nothing.
+ *
  * Mutates and returns the object it was given; it is a fresh mapper output, not
  * shared state.
  */
 export async function resolveLookupLabels(
   data: ConsignmentAdminFormValues,
 ): Promise<ConsignmentAdminFormValues> {
-  const cache = new Map<string, Promise<string>>();
-
-  const hsCode = (code?: string) => resolveLabel(fetchHsCodes, "hs", code, cache);
-  const currency = (code?: string) =>
-    resolveLabel(fetchCurrencies, "currency", code, cache);
-  const material = (code?: string) =>
-    resolveLabel(fetchMaterials, "material", code, cache);
-  const manufacturer = (code?: string) =>
-    resolveLabel(fetchManufacturers, "manufacturer", code, cache);
-
   const pending: Promise<void>[] = [
-    hsCode(data.consignment_hs_code).then((label) => {
+    resolveLookupLabel("hsCode", data.consignment_hs_code).then((label) => {
       if (label) data.consignment_hs_code_label = label;
     }),
-    currency(data.declared_currency).then((label) => {
+    resolveLookupLabel("currency", data.declared_currency).then((label) => {
       if (label) data.declared_currency_label = label;
     }),
   ];
 
   for (const box of data.boxes) {
     pending.push(
-      hsCode(box.hs_code).then((label) => {
+      resolveLookupLabel("hsCode", box.hs_code).then((label) => {
         if (label) box.hs_code_label = label;
       }),
-      currency(box.declared_currency).then((label) => {
+      resolveLookupLabel("currency", box.declared_currency).then((label) => {
         if (label) box.declared_currency_label = label;
       }),
     );
 
     for (const item of box.items) {
       pending.push(
-        hsCode(item.item_hs_code).then((label) => {
+        resolveLookupLabel("hsCode", item.item_hs_code).then((label) => {
           if (label) item.item_hs_code_label = label;
         }),
-        material(item.item_material).then((label) => {
+        resolveLookupLabel("material", item.item_material).then((label) => {
           if (label) item.item_material_label = label;
         }),
-        manufacturer(item.item_manufacturer).then((label) => {
-          if (label) item.item_manufacturer_label = label;
-        }),
-        currency(item.item_currency).then((label) => {
+        resolveLookupLabel("manufacturer", item.item_manufacturer).then(
+          (label) => {
+            if (label) item.item_manufacturer_label = label;
+          },
+        ),
+        resolveLookupLabel("currency", item.item_currency).then((label) => {
           if (label) item.item_currency_label = label;
         }),
       );

@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
+import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import { useConsignmentBox, useSaveBox } from "../_hooks/use-consignment-boxes";
@@ -102,6 +103,16 @@ export function BoxFormDialog({
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
+  /**
+   * Names for the two codes the record stores.
+   *
+   * The form's own `*_label` wins when it is set, because that only happens
+   * when the user picked an option and the label came back with it. Otherwise
+   * these fill in what the detail response could not.
+   */
+  const resolvedHsCode = useLookupLabel("hsCode", form.hs_code);
+  const resolvedCurrency = useLookupLabel("currency", form.declared_currency);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -146,12 +157,13 @@ export function BoxFormDialog({
       no_of_pcs: text(record.no_of_pcs),
       goods_desc: text(record.goods_desc),
       hs_code: text(record.hs_code),
-      // Seeded with the code: the readable name lives behind a lookup this
-      // dialog has no reason to run just to render a trigger.
-      hs_code_label: text(record.hs_code),
+      // Left blank on purpose: `useLookupLabel` below turns the stored code
+      // into its name. Seeding it with the code would win over the resolved
+      // label and pin the trigger to `8517.12` forever.
+      hs_code_label: "",
       quantity_code: text(record.quantity_code) || DEFAULT_QUANTITY_CODE,
       declared_currency: text(record.declared_currency) || DEFAULT_CURRENCY,
-      declared_currency_label: text(record.declared_currency) || DEFAULT_CURRENCY,
+      declared_currency_label: "",
       declared_value: text(record.declared_value),
     });
   }, [open, isEdit, boxId, box.data, nextBoxNo]);
@@ -351,7 +363,7 @@ export function BoxFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.hs_code}
-                    selectedLabel={form.hs_code_label}
+                    selectedLabel={form.hs_code_label || resolvedHsCode}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
@@ -375,7 +387,7 @@ export function BoxFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.declared_currency}
-                    selectedLabel={form.declared_currency_label}
+                    selectedLabel={form.declared_currency_label || resolvedCurrency}
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
