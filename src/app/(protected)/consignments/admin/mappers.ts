@@ -1,0 +1,503 @@
+import {
+  fetchCurrencies,
+  fetchHsCodes,
+  fetchManufacturers,
+  fetchMaterials,
+} from "@/shared/api/services/lookup.service";
+
+import { newBoxDefaults, type ConsignmentAdminFormValues } from "./schema";
+import type {
+  ConsignmentBoxDetail,
+  ConsignmentBoxPayload,
+  ConsignmentDetail,
+  ConsignmentReceiver,
+  ConsignmentSender,
+  CreateConsignmentPayload,
+  PartyAddressType,
+  RateOption,
+  UpdateConsignmentPayload,
+  YesNo,
+} from "./types";
+
+/**
+ * The seam between the form's shape and the wire format.
+ *
+ * Much thinner than the Consignment Request module's equivalent, because this
+ * resource keeps the party prefixes inside the objects — `sender` goes across
+ * essentially untouched. What remains are the three genuine mismatches:
+ *
+ *   flat → nested   `length`/`width`/`height`  ↔  `dimensions: { … }`
+ *   renamed         `quantity`                 ↔  `item_quantity`
+ *   labels          `*_label` fields exist only for display, never sent
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Coercion helpers                                                           */
+/* -------------------------------------------------------------------------- */
+
+function str(value: unknown): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/** The API sometimes returns `"Y "` with trailing space; trim before comparing. */
+function toYesNo(value: unknown, fallback: YesNo): YesNo {
+  const trimmed = typeof value === "string" ? value.trim() : value;
+  return trimmed === "Y" || trimmed === "N" ? trimmed : fallback;
+}
+
+/** `"2026-08-06 16:41:00"` → `"2026-08-06T16:41"`, what a datetime input wants. */
+function toDateTimeLocal(value: unknown): string {
+  if (!value) return "";
+  return String(value).replace(" ", "T").slice(0, 16);
+}
+
+/** Empty strings become `undefined`, so optional keys are omitted, not blanked. */
+function optional(value: string | undefined): string | undefined {
+  return value?.trim() ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Form → payload                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Near-passthrough: only the optional-empty-string trimming differs. */
+function toSenderPayload(
+  sender: ConsignmentAdminFormValues["sender"],
+): ConsignmentSender {
+  return {
+    sender_first_name: sender.sender_first_name,
+    sender_last_name: sender.sender_last_name,
+    sender_company: optional(sender.sender_company),
+    sender_email: sender.sender_email,
+    sender_country: sender.sender_country,
+    sender_state: sender.sender_state,
+    sender_state_name: sender.sender_state_name ?? "",
+    sender_city: sender.sender_city,
+    sender_zip: sender.sender_zip,
+    sender_address_1: sender.sender_address_1,
+    sender_address_2: optional(sender.sender_address_2),
+    sender_phone: sender.sender_phone,
+    sender_telephone: optional(sender.sender_telephone),
+    sender_telephone_ext: optional(sender.sender_telephone_ext),
+    sender_is_resident: sender.sender_is_resident,
+    sender_address_type: sender.sender_address_type,
+  };
+}
+
+function toReceiverPayload(
+  receiver: ConsignmentAdminFormValues["receiver"],
+): ConsignmentReceiver {
+  return {
+    receiver_first_name: receiver.receiver_first_name,
+    receiver_last_name: receiver.receiver_last_name,
+    receiver_company: optional(receiver.receiver_company),
+    receiver_email: receiver.receiver_email,
+    receiver_country: receiver.receiver_country,
+    receiver_state: receiver.receiver_state,
+    receiver_state_name: receiver.receiver_state_name ?? "",
+    receiver_city: receiver.receiver_city,
+    receiver_zip: receiver.receiver_zip,
+    receiver_address_1: receiver.receiver_address_1,
+    receiver_address_2: optional(receiver.receiver_address_2),
+    receiver_phone: receiver.receiver_phone,
+    receiver_telephone: optional(receiver.receiver_telephone),
+    receiver_telephone_ext: optional(receiver.receiver_telephone_ext),
+    receiver_is_resident: receiver.receiver_is_resident,
+    receiver_address_type: receiver.receiver_address_type,
+    receiver_latitude: receiver.receiver_latitude,
+    receiver_longitude: receiver.receiver_longitude,
+  };
+}
+
+/** Drops every `*_label` — those exist only so the comboboxes can render. */
+function toBoxPayloads(
+  boxes: ConsignmentAdminFormValues["boxes"],
+): ConsignmentBoxPayload[] {
+  return boxes.map((box) => ({
+    box_no: box.box_no,
+    weight: box.weight,
+    volumetric_weight: box.volumetric_weight,
+    length: box.length,
+    width: box.width,
+    height: box.height,
+    no_of_pcs: box.no_of_pcs,
+    goods_desc: box.goods_desc,
+    hs_code: optional(box.hs_code),
+    quantity_code: box.quantity_code,
+    declared_currency: box.declared_currency,
+    declared_value: box.declared_value,
+    items: box.items.map((item) => ({
+      item_name: item.item_name,
+      item_hs_code: optional(item.item_hs_code),
+      item_material: optional(item.item_material),
+      item_manufacturer: optional(item.item_manufacturer),
+      item_gender: optional(item.item_gender),
+      // Read as `item_quantity`, written as `quantity`.
+      quantity: item.quantity,
+      item_quantity_code: item.item_quantity_code,
+      item_rate: item.item_rate,
+      item_total_amount: item.item_total_amount,
+      item_currency: item.item_currency,
+    })),
+  }));
+}
+
+/** The parts of the body that create and update word identically. */
+function toSharedPayload(data: ConsignmentAdminFormValues) {
+  return {
+    urgency: data.urgency,
+    sender: toSenderPayload(data.sender),
+    receiver: toReceiverPayload(data.receiver),
+    boxes: toBoxPayloads(data.boxes),
+
+    ship_date: data.ship_date,
+    need_pickup: data.need_pickup,
+    pickup_time: optional(data.pickup_time),
+    preferred_delivery_time: optional(data.preferred_delivery_time),
+    pickup_note: optional(data.pickup_note),
+    delivery_note: optional(data.delivery_note),
+
+    product_type: optional(data.product_type),
+    consignment_hs_code: optional(data.consignment_hs_code),
+    consignment_goods_desc: data.consignment_goods_desc,
+    declared_value: data.declared_value,
+    declared_currency: data.declared_currency,
+
+    nature_of_goods: data.nature_of_goods,
+    shipper_reference_code: optional(data.shipper_reference_code),
+
+    send_updates: data.send_updates,
+    have_hscode: data.have_hscode,
+  };
+}
+
+/**
+ * The create body.
+ *
+ * Routing codes are copied off the chosen quote rather than collected from the
+ * user — they identify the exact lane that was priced. `selected_rate` carries
+ * the whole quote so the backend can verify the price against what it issued.
+ *
+ * No `customer_id` or `corporate_id`: `X-Corporate-Code` scopes the call.
+ */
+export function buildCreatePayload(
+  rate: RateOption,
+  packageType: string,
+  data: ConsignmentAdminFormValues,
+): CreateConsignmentPayload {
+  return {
+    agent_code: rate.agent_code,
+    via_code: rate.via_code,
+    integrator_code: rate.integrator_code,
+    integrator_group_code: rate.integrator_group_code ?? "",
+    service_code: rate.service_code,
+    selected_rate: rate,
+    package_type: packageType,
+    ...toSharedPayload(data),
+  };
+}
+
+/**
+ * The update body.
+ *
+ * Routing and package come from the stored record: an edit does not re-run
+ * check-rates, so re-deriving them is impossible, and re-sending the originals
+ * keeps the consignment on the lane it was priced for.
+ */
+export function buildUpdatePayload(
+  data: ConsignmentAdminFormValues,
+  detail: ConsignmentDetail,
+): UpdateConsignmentPayload {
+  return {
+    agent_code: str(detail.agent_code),
+    via_code: str(detail.via_code),
+    integrator_code: str(detail.integrator_code),
+    integrator_group_code: str(detail.integrator_group_code),
+    service_code: str(detail.service_code),
+    package_type: detail.package_type,
+    ...toSharedPayload(data),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Detail → form                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Seeds the form from a stored record.
+ *
+ * The `*_label` fields are seeded with the stored *code*, so the comboboxes
+ * show something readable-ish immediately rather than an empty trigger.
+ * `resolveLookupLabels` upgrades them to real names once the lookups answer.
+ */
+export function mapDetailToFormValues(
+  detail: ConsignmentDetail,
+  boxes: ConsignmentBoxDetail[],
+): ConsignmentAdminFormValues {
+  const sender = isRecord(detail.sender) ? detail.sender : {};
+  const receiver = isRecord(detail.receiver) ? detail.receiver : {};
+
+  const mappedBoxes = (boxes ?? []).map((box, index) => ({
+    box_no: toNumber(box.box_no, index + 1),
+    weight: toNumber(box.weight),
+    volumetric_weight: toOptionalNumber(box.volumetric_weight),
+    // Nested on the way in, flat on the way out.
+    length: toOptionalNumber(box.dimensions?.length),
+    width: toOptionalNumber(box.dimensions?.width),
+    height: toOptionalNumber(box.dimensions?.height),
+    no_of_pcs: toNumber(box.no_of_pcs, 1),
+    goods_desc: str(box.goods_desc),
+    hs_code: str(box.hs_code),
+    hs_code_label: str(box.hs_code),
+    quantity_code: str(box.quantity_code) || newBoxDefaults.quantity_code,
+    declared_currency:
+      str(box.declared_currency) || newBoxDefaults.declared_currency,
+    declared_currency_label:
+      str(box.declared_currency) || newBoxDefaults.declared_currency,
+    declared_value: toNumber(box.declared_value),
+    items: (box.items ?? []).map((item) => ({
+      item_name: str(item.item_name),
+      item_hs_code: str(item.item_hs_code),
+      item_hs_code_label: str(item.item_hs_code),
+      item_material: str(item.item_material),
+      item_material_label: str(item.item_material),
+      item_manufacturer: str(item.item_manufacturer),
+      item_manufacturer_label: str(item.item_manufacturer),
+      item_gender: str(item.item_gender),
+      quantity: toNumber(item.item_quantity, 1),
+      item_quantity_code:
+        str(item.item_quantity_code) || newBoxDefaults.quantity_code,
+      item_rate: toNumber(item.item_rate),
+      item_total_amount: toNumber(item.item_total_amount),
+      item_currency: str(item.item_currency) || newBoxDefaults.declared_currency,
+      item_currency_label:
+        str(item.item_currency) || newBoxDefaults.declared_currency,
+    })),
+  }));
+
+  return {
+    urgency: str(detail.urgency),
+
+    sender: {
+      sender_first_name: str(sender.sender_first_name),
+      sender_last_name: str(sender.sender_last_name),
+      sender_company: str(sender.sender_company),
+      sender_email: str(sender.sender_email),
+      sender_country: str(sender.sender_country),
+      sender_state: str(sender.sender_state),
+      sender_state_name: str(sender.sender_state_name),
+      sender_city: str(sender.sender_city),
+      sender_zip: str(sender.sender_zip),
+      sender_address_1: str(sender.sender_address_1),
+      sender_address_2: str(sender.sender_address_2),
+      sender_phone: str(sender.sender_phone),
+      sender_telephone: str(sender.sender_telephone),
+      sender_telephone_ext: str(sender.sender_telephone_ext),
+      sender_is_resident: toYesNo(sender.sender_is_resident, "Y"),
+      sender_address_type: (str(sender.sender_address_type) ||
+        "RESIDENT") as PartyAddressType,
+    },
+
+    receiver: {
+      receiver_first_name: str(receiver.receiver_first_name),
+      receiver_last_name: str(receiver.receiver_last_name),
+      receiver_company: str(receiver.receiver_company),
+      receiver_email: str(receiver.receiver_email),
+      receiver_country: str(receiver.receiver_country),
+      receiver_state: str(receiver.receiver_state),
+      receiver_state_name: str(receiver.receiver_state_name),
+      receiver_city: str(receiver.receiver_city),
+      receiver_zip: str(receiver.receiver_zip),
+      receiver_address_1: str(receiver.receiver_address_1),
+      receiver_address_2: str(receiver.receiver_address_2),
+      receiver_phone: str(receiver.receiver_phone),
+      receiver_telephone: str(receiver.receiver_telephone),
+      receiver_telephone_ext: str(receiver.receiver_telephone_ext),
+      receiver_is_resident: toYesNo(receiver.receiver_is_resident, "Y"),
+      receiver_address_type: (str(receiver.receiver_address_type) ||
+        "RESIDENT") as PartyAddressType,
+      receiver_latitude: toOptionalNumber(receiver.receiver_latitude),
+      receiver_longitude: toOptionalNumber(receiver.receiver_longitude),
+    },
+
+    // A consignment with no boxes is not valid, but it is loadable — start the
+    // user with an empty one rather than an unrenderable form.
+    boxes: mappedBoxes.length > 0 ? mappedBoxes : [{ ...newBoxDefaults }],
+
+    ship_date: str(detail.ship_date),
+    need_pickup: toYesNo(detail.need_pickup, "N"),
+    pickup_time: toDateTimeLocal(detail.pickup_time),
+    preferred_delivery_time: toDateTimeLocal(detail.preferred_delivery_time),
+    pickup_note: str(detail.pickup_note),
+    delivery_note: str(detail.delivery_note),
+
+    product_type: str(detail.product_type),
+    product_type_label: str(detail.product_type),
+
+    have_hscode: toYesNo(detail.have_hscode, "N"),
+    consignment_hs_code: str(detail.consignment_hs_code),
+    consignment_hs_code_label: str(detail.consignment_hs_code),
+
+    consignment_goods_desc: str(detail.consignment_goods_desc),
+    declared_value: toNumber(detail.declared_value),
+    declared_currency: str(detail.declared_currency),
+    declared_currency_label: str(detail.declared_currency),
+
+    nature_of_goods: str(detail.nature_of_goods),
+    shipper_reference_code: str(detail.shipper_reference_code),
+
+    send_updates: toYesNo(detail.send_updates, "Y"),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Lookup label resolution                                                    */
+/* -------------------------------------------------------------------------- */
+
+const LOOKUP_PAGE_SIZE = 20;
+
+/**
+ * How long the edit form waits for prettier labels before opening anyway.
+ *
+ * Every field already holds its code as a stand-in label, so the deadline is
+ * the difference between "8517.12" and "Mobile phones" — never between a usable
+ * form and an empty one. Blocking on a slow lookup endpoint would leave someone
+ * staring at a skeleton for the full request timeout when the record itself
+ * arrived long ago.
+ */
+const LABEL_RESOLVE_TIMEOUT_MS = 4_000;
+
+type LookupFetcher = (
+  page: number,
+  perPage: number,
+  query?: string,
+) => Promise<{ data: { value: string | number; label: string }[] }>;
+
+/**
+ * Turns one stored code into its readable label.
+ *
+ * Searches by the code first — the fastest path when the endpoint indexes it —
+ * then falls back to scanning the unfiltered first page, then to the code
+ * itself. Showing the code is a worse answer than the name but a much better
+ * one than an empty field.
+ *
+ * Cached per `(kind, code)` for the lifetime of one resolve pass, so a currency
+ * repeated across thirty items costs one request, not thirty.
+ */
+async function resolveLabel(
+  fetcher: LookupFetcher,
+  kind: string,
+  code: string | undefined,
+  cache: Map<string, Promise<string>>,
+): Promise<string> {
+  const value = code?.trim();
+  if (!value) return "";
+
+  const key = `${kind}:${value}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const pending = (async () => {
+    try {
+      const searched = await fetcher(1, LOOKUP_PAGE_SIZE, value);
+      const hit = searched.data.find((option) => String(option.value) === value);
+      if (hit) return hit.label;
+
+      const firstPage = await fetcher(1, LOOKUP_PAGE_SIZE);
+      const fallback = firstPage.data.find(
+        (option) => String(option.value) === value,
+      );
+      return fallback?.label ?? value;
+    } catch {
+      return value;
+    }
+  })();
+
+  cache.set(key, pending);
+  return pending;
+}
+
+/**
+ * Fills in the display labels for every async-lookup field on a seeded form.
+ *
+ * Run after `mapDetailToFormValues` and before the values reach the form. All
+ * requests go out together, and the batch is capped by a deadline — after which
+ * whatever resolved is kept and the rest stay as codes.
+ *
+ * Mutates and returns the object it was given; it is a fresh mapper output, not
+ * shared state.
+ */
+export async function resolveLookupLabels(
+  data: ConsignmentAdminFormValues,
+): Promise<ConsignmentAdminFormValues> {
+  const cache = new Map<string, Promise<string>>();
+
+  const hsCode = (code?: string) => resolveLabel(fetchHsCodes, "hs", code, cache);
+  const currency = (code?: string) =>
+    resolveLabel(fetchCurrencies, "currency", code, cache);
+  const material = (code?: string) =>
+    resolveLabel(fetchMaterials, "material", code, cache);
+  const manufacturer = (code?: string) =>
+    resolveLabel(fetchManufacturers, "manufacturer", code, cache);
+
+  const pending: Promise<void>[] = [
+    hsCode(data.consignment_hs_code).then((label) => {
+      if (label) data.consignment_hs_code_label = label;
+    }),
+    currency(data.declared_currency).then((label) => {
+      if (label) data.declared_currency_label = label;
+    }),
+  ];
+
+  for (const box of data.boxes) {
+    pending.push(
+      hsCode(box.hs_code).then((label) => {
+        if (label) box.hs_code_label = label;
+      }),
+      currency(box.declared_currency).then((label) => {
+        if (label) box.declared_currency_label = label;
+      }),
+    );
+
+    for (const item of box.items) {
+      pending.push(
+        hsCode(item.item_hs_code).then((label) => {
+          if (label) item.item_hs_code_label = label;
+        }),
+        material(item.item_material).then((label) => {
+          if (label) item.item_material_label = label;
+        }),
+        manufacturer(item.item_manufacturer).then((label) => {
+          if (label) item.item_manufacturer_label = label;
+        }),
+        currency(item.item_currency).then((label) => {
+          if (label) item.item_currency_label = label;
+        }),
+      );
+    }
+  }
+
+  // `race`, not `all`: the deadline wins if the lookups are slow, and the form
+  // opens with codes where names have not arrived yet.
+  await Promise.race([
+    Promise.all(pending),
+    new Promise((resolve) => setTimeout(resolve, LABEL_RESOLVE_TIMEOUT_MS)),
+  ]);
+
+  return data;
+}
