@@ -94,7 +94,7 @@ export function RolesTable({
                 <TableCell className="max-w-[15rem] sm:max-w-xs">
                   <Link
                     href={`/roles/${role.id}`}
-                    className="block truncate font-medium text-foreground hover:text-primary hover:underline"
+                    className="block truncate font-medium text-foreground hover:text-brand-crimson hover:underline"
                   >
                     {role.label?.trim() || role.name}
                   </Link>

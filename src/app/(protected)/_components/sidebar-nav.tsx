@@ -115,8 +115,22 @@ function NavLink({
         strokeWidth={active ? 2.3 : 2}
       />
       {!collapsed ? <span className="truncate">{item.title}</span> : null}
-      {!collapsed && depth > 0 && active ? (
-        <span className="absolute inset-y-2 -left-[13px] w-0.5 rounded-full bg-sidebar-primary" />
+      {/*
+        The rail marker. Navy when active, brand orange on hover — hover is
+        then carried by position *and* background *and* colour, so it still
+        reads without colour perception. Both states render the same span so
+        the marker never shifts as one replaces the other.
+      */}
+      {!collapsed && depth > 0 ? (
+        <span
+          aria-hidden
+          className={cn(
+            "absolute inset-y-2 -left-[13px] w-0.5 rounded-full transition-opacity",
+            active
+              ? "bg-sidebar-primary opacity-100"
+              : "bg-brand-orange opacity-0 group-hover:opacity-100",
+          )}
+        />
       ) : null}
     </Link>
   );

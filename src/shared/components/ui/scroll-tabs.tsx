@@ -117,7 +117,7 @@ export function ScrollTabs({
                 "focus-visible:ring-2 focus-visible:ring-ring/30",
                 active
                   ? "bg-primary text-primary-foreground shadow-soft"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  : "text-muted-foreground hover:bg-brand-crimson-surface hover:text-brand-crimson",
               )}
             >
               {item.label}

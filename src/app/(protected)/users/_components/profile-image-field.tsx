@@ -161,7 +161,7 @@ export function ProfileImageField({
           htmlFor={INPUT_ID}
           className={cn(
             "flex w-full max-w-xs cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-secondary/50 px-4 py-8 text-center transition-colors",
-            "hover:border-primary/40 hover:bg-secondary",
+            "hover:border-brand-orange/50 hover:bg-brand-orange-surface",
             // The input is `sr-only`, so its focus ring has to be drawn here.
             "peer-focus-visible:border-ring/40 peer-focus-visible:ring-2 peer-focus-visible:ring-ring/20",
             disabled && "pointer-events-none opacity-50",

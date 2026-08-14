@@ -32,10 +32,40 @@
   --accent: #eef2f7;
   --accent-foreground: #0b2545;
 
-  /* Brand support colours pulled from the reference UI */
+  /* ---------------------------------------------------------------- */
+  /* Brand support colours pulled from the reference UI                */
+  /*                                                                   */
+  /* Navy is the primary (it is the same hex as `--primary`); crimson  */
+  /* is the accent CTA and the warmth behind row/list hovers; orange   */
+  /* is the edge accent — borders, markers, highlights.                */
+  /*                                                                   */
+  /* Two rules here look like mistakes and are not:                    */
+  /*                                                                   */
+  /* 1. Orange hovers *lighter*, not darker. White on #e2661a is only  */
+  /*    3.42:1, so a filled orange button carries navy text — and      */
+  /*    darkening the fill on hover drops that pair to 3.35:1. Going   */
+  /*    lighter (#ef7a2f) keeps it at 5.49:1. `--brand-orange-ink` is  */
+  /*    the separate, darker shade for orange-as-text on a light       */
+  /*    surface, where #e2661a itself fails.                           */
+  /*                                                                   */
+  /* 2. `--brand-crimson-foreground` flips per theme. White reads at   */
+  /*    9.28:1 on the light crimson but only 3.50:1 on the lightened   */
+  /*    dark-mode one, so dark mode puts dark ink on crimson instead.  */
+  /* ---------------------------------------------------------------- */
   --brand-navy: #0b2545;
+
   --brand-crimson: #8b1538;
+  --brand-crimson-hover: #6f1029;
+  --brand-crimson-foreground: #ffffff;
+  --brand-crimson-surface: #fdf2f5;
+  --brand-crimson-border: #e8c4ce;
+
   --brand-orange: #e2661a;
+  --brand-orange-hover: #ef7a2f;
+  --brand-orange-foreground: #0b2545;
+  --brand-orange-ink: #b34f10;
+  --brand-orange-surface: #fff5ef;
+  --brand-orange-border: #f6d3bd;
 
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
@@ -94,6 +124,24 @@
 
   --accent: #16263f;
   --accent-foreground: #e2e8f0;
+
+  /* Brand ramps lightened for the dark surfaces — the light-mode crimson
+     sits at 1.80:1 on `--card` here, which is no colour at all. */
+  --brand-navy: #0b2545;
+
+  --brand-crimson: #e05c7e;
+  --brand-crimson-hover: #ea6f8e;
+  --brand-crimson-foreground: #0a1628;
+  --brand-crimson-surface: #2a1420;
+  --brand-crimson-border: #7a2740;
+
+  --brand-orange: #fb923c;
+  --brand-orange-hover: #fca55c;
+  --brand-orange-foreground: #0a1628;
+  /* Legible as text on the dark card at 7.40:1 — no darker ink needed. */
+  --brand-orange-ink: #fb923c;
+  --brand-orange-surface: #2a1a10;
+  --brand-orange-border: #7c3d10;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -171,8 +219,19 @@
   --color-ring: var(--ring);
 
   --color-brand-navy: var(--brand-navy);
+
   --color-brand-crimson: var(--brand-crimson);
+  --color-brand-crimson-hover: var(--brand-crimson-hover);
+  --color-brand-crimson-foreground: var(--brand-crimson-foreground);
+  --color-brand-crimson-surface: var(--brand-crimson-surface);
+  --color-brand-crimson-border: var(--brand-crimson-border);
+
   --color-brand-orange: var(--brand-orange);
+  --color-brand-orange-hover: var(--brand-orange-hover);
+  --color-brand-orange-foreground: var(--brand-orange-foreground);
+  --color-brand-orange-ink: var(--brand-orange-ink);
+  --color-brand-orange-surface: var(--brand-orange-surface);
+  --color-brand-orange-border: var(--brand-orange-border);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

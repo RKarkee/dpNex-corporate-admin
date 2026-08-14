@@ -77,7 +77,7 @@ export interface RateOptionCardProps {
 
 export function RateOptionCard({ rate, onSelect }: RateOptionCardProps) {
   return (
-    <Card className="flex flex-col gap-4 p-5 transition-shadow hover:shadow-card">
+    <Card className="flex flex-col gap-4 p-5 transition-all hover:border-brand-orange/40 hover:shadow-card">
       <div className="flex items-start justify-between gap-2">
         <span className="flex items-center gap-2 font-semibold text-foreground">
           <Truck aria-hidden className="size-4 text-primary" />

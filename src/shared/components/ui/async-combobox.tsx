@@ -204,7 +204,7 @@ export function AsyncCombobox({
                   <button
                     type="button"
                     onClick={commitCustomValue}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-brand-crimson-surface"
                   >
                     Use &ldquo;{search.trim()}&rdquo;
                   </button>
@@ -248,7 +248,7 @@ export function AsyncCombobox({
                 <button
                   type="button"
                   onClick={commitCustomValue}
-                  className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent"
+                  className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-brand-crimson-surface"
                 >
                   Use &ldquo;{search.trim()}&rdquo; instead
                 </button>

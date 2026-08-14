@@ -63,7 +63,7 @@ export function Sidebar() {
         className={cn(
           "absolute right-0 top-16 z-10 grid size-6 -translate-y-1/2 translate-x-1/2 place-items-center",
           "rounded-full border border-sidebar-border bg-card text-muted-foreground shadow-soft",
-          "transition-colors hover:border-primary/40 hover:text-foreground",
+          "transition-colors hover:border-brand-orange/50 hover:text-brand-orange-ink",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
         )}
       >

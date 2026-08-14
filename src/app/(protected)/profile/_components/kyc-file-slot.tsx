@@ -193,7 +193,7 @@ export function KycFileSlot({
         <label
           htmlFor={id}
           className={cn(
-            "flex h-56 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-secondary/20 transition-colors hover:border-primary/40 hover:bg-primary/5",
+            "flex h-56 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-secondary/20 transition-colors hover:border-brand-orange/50 hover:bg-brand-orange-surface",
             shownError && "border-destructive/60",
             disabled && "pointer-events-none opacity-60",
           )}

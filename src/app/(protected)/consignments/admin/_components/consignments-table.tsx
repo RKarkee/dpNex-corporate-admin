@@ -133,7 +133,7 @@ export function ConsignmentsTable({
                 <TableCell className="max-w-40 sm:max-w-none">
                   <Link
                     href={`/consignments/admin/${consignment.id}`}
-                    className="truncate font-medium text-foreground hover:text-primary hover:underline"
+                    className="truncate font-medium text-foreground hover:text-brand-crimson hover:underline"
                   >
                     {trackingId(consignment)}
                   </Link>

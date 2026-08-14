@@ -15,14 +15,23 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground shadow-soft hover:bg-destructive/90",
         outline:
           "border border-border bg-card text-foreground shadow-soft hover:bg-accent hover:text-accent-foreground",
+        // The brand pair. Their `focus-visible:ring-*` overrides the base
+        // `ring-ring/40` — cva concatenates base-then-variant into one class
+        // string and `cn()` runs twMerge over it, so the variant wins.
+        // `orange` carries navy text and hovers *lighter*: white on orange is
+        // 3.42:1, and darkening the fill drops the navy pair below AA too.
         crimson:
-          "border border-brand-crimson/30 bg-card text-brand-crimson shadow-soft hover:bg-brand-crimson/5",
+          "bg-brand-crimson text-brand-crimson-foreground shadow-soft hover:bg-brand-crimson-hover active:scale-[0.99] focus-visible:ring-brand-crimson/40",
+        "crimson-outline":
+          "border border-brand-crimson/30 bg-card text-brand-crimson shadow-soft hover:border-brand-crimson/60 hover:bg-brand-crimson-surface active:scale-[0.99] focus-visible:ring-brand-crimson/40",
         orange:
-          "border border-brand-orange/40 bg-card text-brand-orange shadow-soft hover:bg-brand-orange/5",
+          "bg-brand-orange text-brand-orange-foreground shadow-soft hover:bg-brand-orange-hover active:scale-[0.99] focus-visible:ring-brand-orange/50",
+        "orange-outline":
+          "border border-brand-orange/40 bg-card text-brand-orange-ink shadow-soft hover:border-brand-orange/70 hover:bg-brand-orange-surface active:scale-[0.99] focus-visible:ring-brand-orange/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary underline-offset-4 hover:text-brand-crimson hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

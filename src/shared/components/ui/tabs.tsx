@@ -59,7 +59,9 @@ function TabsTrigger({
       data-slot="tabs-trigger"
       className={cn(
         "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors sm:px-4",
-        "text-muted-foreground hover:text-foreground",
+        // `data-[state=inactive]:` is load-bearing — a bare `hover:` would
+        // paint the crimson tint over the navy active tab below.
+        "text-muted-foreground data-[state=inactive]:hover:bg-brand-crimson-surface data-[state=inactive]:hover:text-brand-crimson",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
         "disabled:pointer-events-none disabled:opacity-50",
         // Brand navy, the same token the sidebar's active item uses

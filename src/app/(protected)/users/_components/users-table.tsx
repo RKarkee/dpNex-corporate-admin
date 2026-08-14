@@ -133,7 +133,7 @@ export function UsersTable({ users, onDelete, deletingId }: UsersTableProps) {
               <TableCell className="hidden max-w-64 md:table-cell">
                 <a
                   href={`mailto:${user.email}`}
-                  className="block truncate text-muted-foreground hover:text-primary hover:underline"
+                  className="block truncate text-muted-foreground hover:text-brand-crimson hover:underline"
                 >
                   {user.email}
                 </a>
