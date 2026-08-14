@@ -126,6 +126,17 @@ export const KYC_STATUSES = [
 
 export type KycStatus = (typeof KYC_STATUSES)[number];
 
+/**
+ * The country a new document opens on, ISO 3166-1 alpha-2 — the representation
+ * `useCountryOptions` stores.
+ *
+ * Nearly every document uploaded here is Nepali. It seeds a new draft, and it
+ * also fills in for a stored record that carries no country at all (records
+ * predating this field, which would otherwise open the edit dialog on an empty
+ * required select). A saved country is never overridden.
+ */
+export const DEFAULT_ISSUED_COUNTRY = "NP";
+
 export interface KycDocument {
   id: number;
   document_type: DocumentType;

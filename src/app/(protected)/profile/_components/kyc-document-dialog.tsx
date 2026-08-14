@@ -16,10 +16,13 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useFileUrl } from "@/shared/hooks/use-file-url";
 import { cn } from "@/shared/lib/utils";
 
+import { useCountryName } from "../_hooks/use-country-name";
 import { useKycDocument, useSaveKycDocument } from "../_hooks/use-kyc-documents";
 import type { KycFileSlot } from "../services/kyc.service";
 import {
+  DEFAULT_ISSUED_COUNTRY,
   documentTypeLabel,
+  kycRequiresExpiry,
   kycRequiresFrontBack,
   type KycDocument,
 } from "../types";
@@ -57,6 +60,9 @@ export function KycViewDialog({
 }) {
   const detail = useKycDocument(row?.id, row ?? undefined);
   const doc = (detail.data as KycDocument | undefined) ?? row;
+
+  /** Stored as an iso2 code; shown the way the form showed it. */
+  const issuedCountry = useCountryName(doc?.issued_country);
 
   /**
    * The scan being previewed full size, if any.
@@ -131,10 +137,14 @@ export function KycViewDialog({
               <Detail label="Type" value={documentTypeLabel(doc.document_type)} />
               <Detail label="Number" value={doc.document_number} />
               <Detail label="Issue date" value={doc.issue_date?.slice(0, 10)} />
-              {doc.expiry_date ? (
+              {/* Only passports and driving licences expire. A record of any
+                  other type that still carries a date — seeded by an older
+                  save, or defaulted by the API — is not shown one, so the view
+                  says the same thing the form does. */}
+              {kycRequiresExpiry(doc.document_type) && doc.expiry_date ? (
                 <Detail label="Expiry date" value={doc.expiry_date.slice(0, 10)} />
               ) : null}
-              <Detail label="Issued country" value={doc.issued_country} />
+              <Detail label="Issued country" value={issuedCountry} />
               <Detail label="Issued by" value={doc.issued_by} />
               {doc.issued_place ? (
                 <div className="col-span-2">
@@ -302,7 +312,9 @@ function toFormValues(doc: KycDocument): KycDocumentFormValues {
     // and silently renders blank for anything longer.
     issue_date: doc.issue_date?.slice(0, 10) ?? "",
     expiry_date: doc.expiry_date?.slice(0, 10) ?? "",
-    issued_country: doc.issued_country,
+    // A record written before this field existed comes back empty; opening the
+    // dialog on the default beats opening on an empty required select.
+    issued_country: doc.issued_country || DEFAULT_ISSUED_COUNTRY,
     issued_by: doc.issued_by ?? "",
     issued_place: doc.issued_place ?? "",
   };

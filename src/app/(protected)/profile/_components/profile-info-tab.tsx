@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
 import {
   FileText,
   Info,
@@ -264,7 +265,15 @@ export function ProfileInfoTab({
       : undefined;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    // Same entrance as the KYC tab — Radix unmounts the inactive panel, so
+    // switching tabs remounts this and replays it.
+    <motion.form
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-6"
+    >
       {unreadable ? (
         <Notice
           tone="warning"
@@ -480,7 +489,7 @@ export function ProfileInfoTab({
               : "Save Changes"}
         </Button>
       </div>
-    </form>
+    </motion.form>
   );
 }
 

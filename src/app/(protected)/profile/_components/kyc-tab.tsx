@@ -29,8 +29,11 @@ import {
   useDeleteKycDocument,
   useSaveKycDocument,
 } from "../_hooks/use-kyc-documents";
+import { useCountryName } from "../_hooks/use-country-name";
 import {
+  DEFAULT_ISSUED_COUNTRY,
   documentTypeLabel,
+  kycRequiresExpiry,
   kycRequiresFrontBack,
   kycStatusLabel,
   type KycDocument,
@@ -78,7 +81,10 @@ function newDraft(): Draft {
       document_number: "",
       issue_date: "",
       expiry_date: "",
-      issued_country: "",
+      // Nearly every document uploaded here is Nepali, so the field opens on
+      // NP; the combobox stores ISO 3166-1 alpha-2, and any other country is
+      // still one selection away.
+      issued_country: DEFAULT_ISSUED_COUNTRY,
       issued_by: "",
       issued_place: "",
     },
@@ -506,9 +512,10 @@ function DocumentCard({
   onDelete: () => void;
 }) {
   const twoSided = kycRequiresFrontBack(doc.document_type);
+  const issuedCountry = useCountryName(doc.issued_country);
 
   return (
-    <Card className="h-full p-4 transition-shadow hover:shadow-md">
+    <Card className="h-full p-4 transition-all hover:border-brand-orange/40 hover:shadow-card">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10">
@@ -584,13 +591,13 @@ function DocumentCard({
           {doc.issue_date ? (
             <span>Issued: {doc.issue_date.slice(0, 10)}</span>
           ) : null}
-          {doc.expiry_date ? (
+          {/* Same rule as the form and the detail dialog: only the two types
+              that expire show a date, whatever the record happens to hold. */}
+          {kycRequiresExpiry(doc.document_type) && doc.expiry_date ? (
             <span>Expires: {doc.expiry_date.slice(0, 10)}</span>
           ) : null}
           {doc.issued_by ? <span>By: {doc.issued_by}</span> : null}
-          {doc.issued_country ? (
-            <span>Country: {doc.issued_country}</span>
-          ) : null}
+          {issuedCountry ? <span>Country: {issuedCountry}</span> : null}
         </div>
       </div>
     </Card>
@@ -626,7 +633,7 @@ function Thumbnail({
           />
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/15 via-transparent to-transparent"
+            className="pointer-events-none absolute inset-0 bg-linear-to-t from-foreground/15 via-transparent to-transparent"
           />
           <span className="absolute bottom-2 left-2 rounded-full bg-foreground/60 px-2 py-0.5 text-[11px] font-medium text-background">
             {label}
