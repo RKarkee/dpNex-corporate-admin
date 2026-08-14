@@ -148,10 +148,33 @@ export interface KycDocument {
 }
 
 /**
- * Two-sided documents. A citizenship certificate is printed front and back and
- * the API stores the sides separately; everything else is a single scan.
+ * Two-sided documents — the ones the form renders as two upload slots.
+ *
+ * A citizenship certificate and a national ID card are both printed front and
+ * back, and the API stores the sides under separate keys:
+ *
+ *   front (or the only scan) → `file`      → read back as `file_path`
+ *   back                     → `back_file` → read back as `back_file_path`
+ *
+ * Everything else is a single scan and uses `file` alone. That mapping lives in
+ * `buildForm`; this predicate only decides how many slots appear.
  */
 export function kycRequiresFrontBack(type: DocumentType): boolean {
+  return type === "CITIZENSHIP" || type === "NID";
+}
+
+/**
+ * Whether the back side is *mandatory*, as opposed to merely offered.
+ *
+ * Deliberately narrower than `kycRequiresFrontBack`. A citizenship certificate
+ * carries required detail on the reverse, so both sides must be present. A
+ * national ID renders the same two slots — the reverse is worth capturing when
+ * the user has it — but saving without it is allowed.
+ *
+ * Splitting the two means "how many slots" and "how many are required" can
+ * differ per type without either rule having to know about the other.
+ */
+export function kycBackRequired(type: DocumentType): boolean {
   return type === "CITIZENSHIP";
 }
 

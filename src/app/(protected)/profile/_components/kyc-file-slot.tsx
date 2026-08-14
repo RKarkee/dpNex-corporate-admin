@@ -3,48 +3,52 @@
 import * as React from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { useFileUrl } from "@/shared/hooks/use-file-url";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * One document scan: dropzone when empty, preview when filled.
+ * One document scan: a dropzone when empty, a preview when filled.
  *
- * Two kinds of "already has a file" exist here and they look different on
- * purpose:
+ * Two kinds of "already has a file" exist here, and they now mean the same
+ * thing to the save:
  *
- * - `existingReference` — a scan stored on the server. Shown as a preview, but
- *   it does **not** satisfy the save, because the API's file-preservation
- *   behaviour is unverified. The slot says so.
- * - `file` — something the user has just picked. This does satisfy the save.
+ * - `existingReference` — a scan stored on the server. It satisfies the save,
+ *   because `hydrateSelection` re-downloads and re-sends it for any slot the
+ *   user leaves alone.
+ * - `file` — something the user just picked, which replaces the stored one.
+ *
+ * That equivalence is why this component no longer carries a `reuploadRequired`
+ * state: there is nothing left to warn about.
  */
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export interface KycFileSlotProps {
+  /** Stable per slot — ties the visible dropzone to its hidden input. */
+  id: string;
   label: string;
+  required?: boolean;
+  /** Small note beside the label, e.g. "Optional" on a back side. */
+  hint?: string;
   /** The file the user picked in this session, if any. */
   file: File | null;
   onSelect: (file: File | null) => void;
   /** A scan already stored server-side, as an authenticated reference. */
   existingReference?: string | null;
-  /**
-   * True when this slot must receive a file before the form can be saved even
-   * though a stored scan exists — the unverified-preservation case.
-   */
-  reuploadRequired?: boolean;
   disabled?: boolean;
   error?: string;
 }
 
 export function KycFileSlot({
+  id,
   label,
+  required = false,
+  hint,
   file,
   onSelect,
   existingReference,
-  reuploadRequired = false,
   disabled = false,
   error,
 }: KycFileSlotProps) {
@@ -52,8 +56,10 @@ export function KycFileSlot({
   const [localError, setLocalError] = React.useState<string | null>(null);
 
   // The stored scan sits behind an authenticated endpoint, so it cannot go
-  // straight into an `<img src>`.
-  const { src: existingUrl } = useFileUrl(file ? null : existingReference);
+  // straight into an `<img src>`. Skipped once the user picks something.
+  const { src: existingUrl, isLoading } = useFileUrl(
+    file ? null : existingReference,
+  );
 
   /**
    * The preview is *derived* from the picked file, not stored in state — a
@@ -65,10 +71,7 @@ export function KycFileSlot({
    * `useFileUrl` owns that one.
    */
   const previewUrl = React.useMemo(
-    () =>
-      file && file.type.startsWith("image/")
-        ? URL.createObjectURL(file)
-        : null,
+    () => (file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null),
     [file],
   );
 
@@ -111,91 +114,111 @@ export function KycFileSlot({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
-        {reuploadRequired ? (
-          <span className="text-xs font-medium text-amber-600">
-            Re-upload required
-          </span>
+        <Label htmlFor={id}>
+          {label}
+          {required ? (
+            <span aria-hidden className="ml-0.5 text-destructive">
+              *
+            </span>
+          ) : null}
+        </Label>
+        {hint ? (
+          <span className="text-xs text-muted-foreground">{hint}</span>
         ) : null}
-      </div>
-
-      <div
-        className={cn(
-          "relative grid h-48 place-items-center overflow-hidden rounded-lg border border-dashed border-border bg-secondary/40 transition-colors",
-          shownError && "border-destructive/60",
-          reuploadRequired && !file && "border-amber-500/60 bg-amber-500/5",
-        )}
-      >
-        {hasSomething ? (
-          <>
-            {imageUrl ? (
-              // Not `next/image`: the source is a blob or data URL whose
-              // dimensions are unknown, and it never benefits from the loader.
-              <img
-                src={imageUrl}
-                alt={`${label} preview`}
-                className="size-full object-contain"
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <FileText className="size-8" aria-hidden />
-                <span className="max-w-48 truncate px-2 text-xs">
-                  {file?.name ?? "Stored document"}
-                </span>
-              </div>
-            )}
-
-            {file && !disabled ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={clear}
-                aria-label={`Remove the ${label.toLowerCase()} you selected`}
-                className="absolute right-2 top-2 size-8"
-              >
-                <X className="size-4" aria-hidden />
-              </Button>
-            ) : null}
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
-            <UploadCloud className="size-8" aria-hidden />
-            <span className="text-xs">JPG, PNG, WebP or PDF · up to 10MB</span>
-          </div>
-        )}
       </div>
 
       <input
         ref={inputRef}
+        id={id}
         type="file"
         accept={ACCEPTED.join(",")}
         onChange={handleChange}
         disabled={disabled}
         className="sr-only"
-        id={`kyc-file-${label.replace(/\s+/g, "-").toLowerCase()}`}
       />
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
-        className="w-full"
-      >
-        <UploadCloud className="size-4" aria-hidden />
-        {file ? "Choose a different file" : hasSomething ? "Re-upload" : "Choose file"}
-      </Button>
+      {hasSomething ? (
+        <div
+          className={cn(
+            "relative grid h-56 place-items-center overflow-hidden rounded-xl border border-border bg-secondary/40 shadow-sm",
+            shownError && "border-destructive/60",
+          )}
+        >
+          {imageUrl ? (
+            // Not `next/image`: the source is a blob or data URL whose
+            // dimensions are unknown, and it never benefits from the loader.
+            <img
+              src={imageUrl}
+              alt={`${label} preview`}
+              className="size-full object-contain"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <FileText className="size-10 opacity-60" aria-hidden />
+              <span className="max-w-48 truncate px-2 text-sm">
+                {file?.name ?? "Stored document"}
+              </span>
+            </div>
+          )}
+
+          {/* Lifts the corner control off a light scan without tinting the
+              image itself. Non-interactive, so it never eats the click. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/10 via-transparent to-transparent"
+          />
+
+          {/* Clears the slot back to an empty dropzone, whether what is showing
+              is a fresh pick or the stored scan.
+
+              Clearing a stored scan is not a delete: it drops this slot out of
+              hydration, so the save stops re-sending that file. Nothing changes
+              on the record until the form is submitted, and cancelling the
+              dialog undoes it. */}
+          {disabled ? null : (
+            <button
+              type="button"
+              onClick={clear}
+              title={
+                file ? "Remove and re-upload" : "Remove this scan and upload another"
+              }
+              className="absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-card text-muted-foreground shadow-md transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <X className="size-4" aria-hidden />
+              <span className="sr-only">Remove the {label.toLowerCase()}</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <label
+          htmlFor={id}
+          className={cn(
+            "flex h-56 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-secondary/20 transition-colors hover:border-primary/40 hover:bg-primary/5",
+            shownError && "border-destructive/60",
+            disabled && "pointer-events-none opacity-60",
+          )}
+        >
+          {isLoading ? (
+            <span className="text-sm text-muted-foreground">Loading…</span>
+          ) : (
+            <>
+              <span className="grid size-12 place-items-center rounded-full bg-secondary">
+                <UploadCloud className="size-6 text-muted-foreground" aria-hidden />
+              </span>
+              <span className="text-sm font-medium text-foreground">
+                Click to upload
+              </span>
+              <span className="text-xs text-muted-foreground">
+                JPG, PNG, WebP or PDF · up to 10MB
+              </span>
+            </>
+          )}
+        </label>
+      )}
 
       {shownError ? (
         <p role="alert" className="text-xs text-destructive">
           {shownError}
-        </p>
-      ) : reuploadRequired && !file ? (
-        <p className="text-xs text-muted-foreground">
-          The stored scan cannot be carried over automatically. Select it again
-          to save your changes.
         </p>
       ) : null}
     </div>

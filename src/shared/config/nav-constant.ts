@@ -64,4 +64,10 @@ export const sidebarNav: NavItem[] = [
       },
     ],
   },
+  {
+    title:"Profile",
+    href:"/profile",
+    icon:Users,
+    // anyPermission:["view_profile","create_profile"]
+  }
 ];

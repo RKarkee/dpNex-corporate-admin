@@ -104,3 +104,60 @@ export async function fetchFileDataUrl(
 
   return toDataUrl(blob);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Re-sending a stored file                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** The trailing path segment, so a re-sent file keeps a recognisable name. */
+function fileNameFrom(reference: string, fallback: string): string {
+  const path = reference.split("?")[0] ?? reference;
+  const last = path.split("/").filter(Boolean).pop();
+  return last && last.includes(".") ? last : fallback;
+}
+
+/**
+ * Downloads a stored file and hands it back as a `File`, ready to put in a
+ * `FormData`.
+ *
+ * This is what lets an edit touch a text field without making the user re-pick
+ * scans they never changed: the untouched slots are re-downloaded and re-sent
+ * verbatim, so the request always carries a complete set of files and the
+ * question of whether the API preserves an omitted one stops mattering.
+ *
+ * Unlike `fetchFileDataUrl` this accepts any content type — KYC scans are
+ * frequently PDFs, and rejecting those would put the user right back to
+ * re-picking.
+ *
+ * Returns `null` rather than throwing when the file cannot be retrieved. The
+ * caller's fallback is to require a fresh pick for that slot, which is a
+ * worse experience but a correct one; failing the whole save because a
+ * *preload* failed would be worse still.
+ */
+export async function fetchFileAsFile(
+  reference: string | null | undefined,
+  fallbackName: string,
+  signal?: AbortSignal,
+): Promise<File | null> {
+  if (!reference?.trim()) return null;
+
+  const path = toApiPath(reference);
+  if (!path) return null;
+
+  try {
+    const blob = await privateApiClient.get<Blob>(path, {
+      responseType: "blob",
+      silent: true,
+      skipAuthRedirect: true,
+      signal,
+    });
+
+    if (!(blob instanceof Blob) || blob.size === 0) return null;
+
+    return new File([blob], fileNameFrom(reference, fallbackName), {
+      type: blob.type || "application/octet-stream",
+    });
+  } catch {
+    return null;
+  }
+}

@@ -60,6 +60,27 @@ export function validateKycValues(
   return errors;
 }
 
+/**
+ * The same checks, minus the file rules.
+ *
+ * Used when editing: the stored scans are re-sent for any slot the user left
+ * alone (`hydrateSelection`), so an empty slot is not a validation failure and
+ * flagging it would block a save that is about to succeed. The service still
+ * runs `missingKycFiles` against the hydrated selection, so a scan that truly
+ * cannot be produced is caught — just at the point where that is actually known.
+ */
+export function validateKycTextValues(
+  values: KycDocumentFormValues,
+): Record<string, string> {
+  const errors = validateKycValues(values, {});
+
+  for (const slot of ["file", "front_file", "back_file"]) {
+    delete errors[slot];
+  }
+
+  return errors;
+}
+
 /** The same map without one field — a message the user has just acted on. */
 export function withoutField(
   errors: Record<string, string>,
@@ -96,6 +117,7 @@ const UPLOAD_REJECTED =
 function fileSlotsFor(type: DocumentType): KycFileSlot[] {
   return kycRequiresFrontBack(type) ? ["front_file", "back_file"] : ["file"];
 }
+
 
 /**
  * The API's field name, translated to the slot the form renders it under.
