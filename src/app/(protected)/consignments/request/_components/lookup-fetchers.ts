@@ -1,5 +1,6 @@
 import {
   fetchCurrencies,
+  fetchForwarders,
   fetchHsCodes,
   fetchManufacturers,
   fetchMaterials,
@@ -43,3 +44,6 @@ export const currencyFetcher = async (page: number, query: string) =>
 
 export const manufacturerFetcher = async (page: number, query: string) =>
   toPage(await fetchManufacturers(page, PER_PAGE, query || undefined));
+
+export const forwarderFetcher = async (page: number, query: string) =>
+  toPage(await fetchForwarders(page, PER_PAGE, query || undefined));

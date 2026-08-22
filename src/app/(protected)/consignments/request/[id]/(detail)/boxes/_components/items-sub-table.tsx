@@ -17,7 +17,7 @@ import {
 import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import { useBoxItems, useDeleteItem } from "../_hooks/use-consignment-boxes";
-import type { ConsignmentBoxItemDetail } from "../types";
+import type { ConsignmentBoxItemDetail } from "../../../../types";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
 import { ItemFormDialog } from "./item-form-dialog";
 import type { BoxPermissions } from "./boxes-manager";

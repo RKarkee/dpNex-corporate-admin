@@ -1,4 +1,10 @@
-import { FileText, MapPin, ScrollText, type LucideIcon } from "lucide-react";
+import {
+  Boxes,
+  FileText,
+  MapPin,
+  ScrollText,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * The tabs on the consignment request detail page.
@@ -23,6 +29,10 @@ export interface DetailTab {
 
 export const DETAIL_TABS: DetailTab[] = [
   { segment: "", label: "Overview", icon: ScrollText },
+  // Directly after Overview: boxes and their items are the substance of a
+  // consignment, and the tab replaces the manager that used to sit inline on
+  // the overview panel.
+  { segment: "boxes", label: "Boxes", icon: Boxes },
   { segment: "documents", label: "Documents", icon: FileText },
   { segment: "locations", label: "Locations", icon: MapPin },
 ];

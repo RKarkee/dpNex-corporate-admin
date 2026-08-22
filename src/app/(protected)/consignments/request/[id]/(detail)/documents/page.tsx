@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { FileText } from "lucide-react";
 
-import { TabPlaceholder } from "../_components/tab-placeholder";
+import { DocumentsTab } from "./_components/documents-tab";
 
 export const metadata: Metadata = {
   title: "Documents",
@@ -10,17 +9,19 @@ export const metadata: Metadata = {
 /**
  * The Documents tab.
  *
- * A landing page for now. The route, the tab and the empty state are real; the
- * data is not. `GET /corporate/consignmentrequests/{id}/documents` is the
- * endpoint this will read once its response shape is confirmed — nothing in the
- * app has called it yet, so the columns would be guesswork.
+ * A server component that does nothing but read the route param and hand it
+ * down: the tab itself is interactive (drafts, dialogs, paging) and owns its
+ * own data through React Query, so there is nothing useful to fetch here.
+ *
+ * `params` is a promise in Next 15+, awaited the same way the detail layout
+ * does it.
  */
-export default function ConsignmentRequestDocumentsPage() {
-  return (
-    <TabPlaceholder
-      icon={FileText}
-      title="Documents are not connected yet"
-      description="Invoices, customs paperwork and proof of delivery for this request will appear here."
-    />
-  );
+export default async function ConsignmentRequestDocumentsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <DocumentsTab requestId={id} />;
 }

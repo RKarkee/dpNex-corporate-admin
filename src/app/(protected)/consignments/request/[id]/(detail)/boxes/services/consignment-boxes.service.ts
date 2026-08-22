@@ -7,8 +7,8 @@ import type {
   ConsignmentBoxDetail,
   ConsignmentBoxItemDetail,
   ItemWritePayload,
-} from "../types";
-import { ENDPOINTS } from "./consignment-request.service";
+} from "../../../../types";
+import { ENDPOINTS } from "../../../../services/consignment-request.service";
 
 /**
  * Boxes and their items, as sub-resources of a consignment request.

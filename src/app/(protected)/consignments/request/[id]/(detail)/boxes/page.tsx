@@ -2,15 +2,15 @@
 
 import * as React from "react";
 
-import { LocationsTab } from "./_components/locations-tab";
+import { BoxesTab } from "./_components/boxes-tab";
 
 /**
- * The Locations tab.
+ * The Boxes tab.
  *
- * Mirrors the Boxes page: a client component, because `React.use(params)`
+ * Mirrors the Overview page: a client component, because `React.use(params)`
  * unwraps the promise during render and the panel below is interactive anyway.
  */
-export default function ConsignmentRequestLocationsPage({
+export default function ConsignmentRequestBoxesPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -19,5 +19,5 @@ export default function ConsignmentRequestLocationsPage({
   const { id } = React.use(params);
 
   // The layout has already rejected an unparseable id before this mounts.
-  return <LocationsTab id={Number(id)} />;
+  return <BoxesTab id={Number(id)} />;
 }

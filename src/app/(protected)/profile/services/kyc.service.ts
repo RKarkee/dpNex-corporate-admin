@@ -359,10 +359,16 @@ export function createKycDocument(
 }
 
 /**
- * `POST /corporate/kycdocuments/{id}` with `_method=PUT`.
+ * `POST /corporate/kycdocuments/{id}` with `_method=PATCH`.
  *
  * Same PHP constraint `updateUser` documents: `$_FILES` is not populated for a
- * multipart PUT/PATCH body, and the scans have to ride along.
+ * multipart PUT/PATCH body, and the scans have to ride along — so the request
+ * goes out as a POST carrying the real verb in `_method`.
+ *
+ * PATCH, matching every other write in this app (`users`, the consignment
+ * boxes and items, the consignment request documents). An earlier version spoofed
+ * PUT here on the assumption that a full-record update needed it; that was never
+ * confirmed against a live response and was simply wrong.
  *
  * `stored` is the record as it currently exists. Any slot the user left alone
  * is re-downloaded from it and re-sent, so a text-only edit needs no file
@@ -381,7 +387,7 @@ export async function updateKycDocument(
   if (missing.length) throw new KycFileRequiredError(missing);
 
   const form = buildForm(input, hydrated);
-  form.set("_method", "PUT");
+  form.set("_method", "PATCH");
 
   return privateApiClient.mutate("POST", `${KYC_PATH}/${id}`, form, {
     silent: true,

@@ -82,9 +82,13 @@ function ToastCard({ toast }: { toast: Toast }) {
           {toast.title ? (
             <p className={cn("text-sm font-semibold", style.text)}>{toast.title}</p>
           ) : null}
+          {/* `whitespace-pre-line`: a validation failure naming several fields
+              arrives as one message per line, and collapsing them would run the
+              sentences together into something no one reads. Ordinary
+              single-line messages are unaffected. */}
           <p
             className={cn(
-              "break-words text-sm leading-snug",
+              "whitespace-pre-line break-words text-sm leading-snug",
               style.text,
               toast.title && "mt-0.5 opacity-90",
             )}

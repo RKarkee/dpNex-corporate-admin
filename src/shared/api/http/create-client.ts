@@ -196,7 +196,9 @@ function toApiError(error: unknown): unknown {
   return new ApiError(error.response.status, display, {
     payload: raw,
     upstreamMessage: upstream,
-    fieldErrors: error.response.status === 422 ? extractFieldErrors(raw) : undefined,
+    // Not gated on 422: a 400 or 409 can name fields too, and `extractFieldErrors`
+    // already returns `undefined` when the body carries none.
+    fieldErrors: extractFieldErrors(raw),
     cause: error,
   });
 }

@@ -22,8 +22,8 @@ import {
   updateBox,
   updateItem,
 } from "../services/consignment-boxes.service";
-import type { BoxWritePayload, ItemWritePayload } from "../types";
-import { consignmentRequestKeys } from "./query-keys";
+import type { BoxWritePayload, ItemWritePayload } from "../../../../types";
+import { consignmentRequestKeys } from "../../../../_hooks/query-keys";
 
 /**
  * Boxes and items on the detail page.

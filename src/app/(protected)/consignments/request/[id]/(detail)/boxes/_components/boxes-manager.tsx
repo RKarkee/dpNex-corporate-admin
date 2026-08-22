@@ -28,7 +28,7 @@ import {
 import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import { useConsignmentBoxes, useDeleteBox } from "../_hooks/use-consignment-boxes";
-import type { ConsignmentBoxDetail } from "../types";
+import type { ConsignmentBoxDetail } from "../../../../types";
 import { BoxFormDialog } from "./box-form-dialog";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
 import { ItemsSubTable } from "./items-sub-table";

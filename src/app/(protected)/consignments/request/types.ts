@@ -309,6 +309,12 @@ export interface ConsignmentBoxDetail {
 /** A related resource the detail endpoint may expand — agent, via, service… */
 export type RelatedResource = Record<string, unknown> | null;
 
+/** One entry of `next_statuses` — the API supplies both code and copy. */
+export interface NextStatusOption {
+  value: string;
+  label: string;
+}
+
 export interface ConsignmentRequestDetail {
   id: number;
   request_tracking_id: string;
@@ -353,6 +359,14 @@ export interface ConsignmentRequestDetail {
   nature_of_goods?: string | null;
   shipper_reference_code?: string | null;
   status: string;
+  status_label?: string | null;
+  /**
+   * The statuses this record may legally move to next, already labelled by the
+   * API. Read by the Locations tab, whose status select must offer exactly
+   * these and nothing else — a hardcoded list would drift from the workflow the
+   * backend actually enforces.
+   */
+  next_statuses?: NextStatusOption[];
   send_updates: string;
   have_hscode: string;
   qr_data?: string | null;

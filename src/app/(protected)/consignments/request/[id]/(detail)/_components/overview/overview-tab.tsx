@@ -2,8 +2,6 @@
 
 import { useCountryOptions } from "@/shared/hooks/use-location-options";
 
-import { BoxesManager } from "../../../../_components/boxes-manager";
-import { useConsignmentPermissions } from "../../../../_hooks/use-consignment-permissions";
 import { useConsignmentRequest } from "../../../../_hooks/use-consignment-request";
 import {
   CustomerSection,
@@ -30,7 +28,6 @@ import {
  */
 export function OverviewTab({ id }: { id: number }) {
   const { data } = useConsignmentRequest(id);
-  const { canUpdate } = useConsignmentPermissions();
   const { options: countryOptions } = useCountryOptions();
 
   // The shell renders the loading and error states and only mounts a tab once
@@ -61,18 +58,9 @@ export function OverviewTab({ id }: { id: number }) {
         countryOptions={countryOptions}
       />
 
-      {/* Boxes and items keep their own dialogs — unchanged by the tab split. */}
-      <BoxesManager
-        consignmentId={id}
-        permissions={{
-          canAddBoxes: canUpdate,
-          canUpdateBoxes: canUpdate,
-          canDeleteBoxes: canUpdate,
-          canAddItems: canUpdate,
-          canUpdateItems: canUpdate,
-          canDeleteItems: canUpdate,
-        }}
-      />
+      {/* Boxes and items now live in their own tab. `RoutingSection` above
+          still reports the count, which is the part that belongs on a summary;
+          managing them is a task, and a task deserves its own route. */}
 
       <PickupSection request={request} />
       <ValueSection request={request} />

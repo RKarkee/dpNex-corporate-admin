@@ -39,6 +39,7 @@ const PATHS = {
   hsCodes: "/hscodes/get-lists",
   currencies: "/currencies/get-lists",
   manufacturers: "/manufacturers/get-lists",
+  forwarders: "/forwarders/get-lists",
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -128,6 +129,15 @@ export function fetchManufacturers(page: number, perPage: number, query?: string
   return fetchLookup(PATHS.manufacturers, page, perPage, query, "q");
 }
 
+/**
+ * Onward carriers, for the `forwarder_code` a tracking location can carry.
+ *
+ * Same `{ data, meta }` shape as the rest, searched with `q`.
+ */
+export function fetchForwarders(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.forwarders, page, perPage, query, "q");
+}
+
 /* -------------------------------------------------------------------------- */
 /* Resolving one stored code to its label                                     */
 /* -------------------------------------------------------------------------- */
@@ -144,7 +154,8 @@ export type LookupKind =
   | "material"
   | "hsCode"
   | "currency"
-  | "manufacturer";
+  | "manufacturer"
+  | "forwarder";
 
 const FETCHERS: Record<
   LookupKind,
@@ -155,6 +166,7 @@ const FETCHERS: Record<
   hsCode: fetchHsCodes,
   currency: fetchCurrencies,
   manufacturer: fetchManufacturers,
+  forwarder: fetchForwarders,
 };
 
 const RESOLVE_PAGE_SIZE = 20;
