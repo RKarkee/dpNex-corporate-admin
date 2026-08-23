@@ -1,38 +1,27 @@
 "use client";
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-
-import { isApiError } from "@/shared/api/errors";
-import { toast } from "@/shared/components/toast";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import {
-  createBoxes,
-  createItems,
-  deleteBox,
-  deleteItem,
   fetchBox,
   fetchItem,
   listBoxes,
   listItems,
-  updateBox,
-  updateItem,
-} from "../services/consignment-admin-boxes.service";
-import type { BoxWritePayload, ItemWritePayload } from "../types";
-import { consignmentAdminKeys } from "./query-keys";
+} from "../services/boxes.service";
+import { consignmentAdminKeys } from "../../../../_hooks/query-keys";
 
 /**
- * Boxes and items on the consignment detail page.
+ * Boxes and items on the consignment detail page — **reads only**.
  *
- * Every write invalidates `consignmentAdminKeys.record(id)` — the whole subtree
- * for that consignment. That is wider than the table being edited, and
- * deliberately so: adding a box changes the box list, the record's own
- * `no_of_boxes` in the detail header, and the values the edit form would seed
- * from. Invalidating only the box list would leave the other two stale.
+ * An accepted consignment's contents are a record of what was shipped, not a
+ * working draft: they are composed and corrected on the request before it is
+ * accepted. So this tab lists boxes, expands them to their items, and opens
+ * either as a details dialog. Nothing here writes.
+ *
+ * That is the one substantive difference from the request module's boxes tab,
+ * which owns the same four reads plus create, update and delete. The write
+ * paths are absent rather than permission-gated — a mutation that can never be
+ * reached is a maintenance cost with no user.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -98,110 +87,5 @@ export function useBoxItem(
     queryFn: ({ signal }) =>
       fetchItem(consignmentId, boxId as number, itemId as number, signal),
     enabled: Boolean(consignmentId) && Boolean(boxId) && Boolean(itemId),
-  });
-}
-
-/* -------------------------------------------------------------------------- */
-/* Writes                                                                     */
-/* -------------------------------------------------------------------------- */
-
-/** Shared error handling: 422s render on the dialog's own fields. */
-function reportError(error: unknown, title: string) {
-  if (isApiError(error) && error.isValidationError) return;
-  if (isApiError(error)) {
-    toast.error({ title, message: error.message });
-    return;
-  }
-  toast.error(error);
-}
-
-export function useSaveBox(consignmentId: number | string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      boxId,
-      payload,
-    }: {
-      /** Absent for a create; the endpoint takes a batch either way. */
-      boxId?: number;
-      payload: BoxWritePayload;
-    }) =>
-      boxId
-        ? updateBox(consignmentId, boxId, payload)
-        : createBoxes(consignmentId, [payload]),
-
-    onSuccess: async (result, { boxId }) => {
-      toast.success(
-        result.message?.trim() || (boxId ? "Box updated" : "Box added"),
-      );
-      await queryClient.invalidateQueries({
-        queryKey: consignmentAdminKeys.record(consignmentId),
-      });
-    },
-
-    onError: (error) => reportError(error, "Could not save box"),
-  });
-}
-
-export function useDeleteBox(consignmentId: number | string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (boxId: number) => deleteBox(consignmentId, boxId),
-
-    onSuccess: async (result) => {
-      toast.success(result.message?.trim() || "Box deleted");
-      await queryClient.invalidateQueries({
-        queryKey: consignmentAdminKeys.record(consignmentId),
-      });
-    },
-
-    onError: (error) => reportError(error, "Could not delete box"),
-  });
-}
-
-export function useSaveItem(consignmentId: number | string, boxId: number) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      itemId,
-      payload,
-    }: {
-      itemId?: number;
-      payload: ItemWritePayload;
-    }) =>
-      itemId
-        ? updateItem(consignmentId, boxId, itemId, payload)
-        : createItems(consignmentId, boxId, [payload]),
-
-    onSuccess: async (result, { itemId }) => {
-      toast.success(
-        result.message?.trim() || (itemId ? "Item updated" : "Item added"),
-      );
-      await queryClient.invalidateQueries({
-        queryKey: consignmentAdminKeys.record(consignmentId),
-      });
-    },
-
-    onError: (error) => reportError(error, "Could not save item"),
-  });
-}
-
-export function useDeleteItem(consignmentId: number | string, boxId: number) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (itemId: number) => deleteItem(consignmentId, boxId, itemId),
-
-    onSuccess: async (result) => {
-      toast.success(result.message?.trim() || "Item deleted");
-      await queryClient.invalidateQueries({
-        queryKey: consignmentAdminKeys.record(consignmentId),
-      });
-    },
-
-    onError: (error) => reportError(error, "Could not delete item"),
   });
 }

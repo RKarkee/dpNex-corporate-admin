@@ -1,14 +1,11 @@
-import type { MutationResult } from "@/shared/api/http/create-client";
 import { privateApiClient } from "@/shared/api/private-client";
 import type { PageMeta } from "@/shared/api/types";
 
 import type {
-  BoxWritePayload,
   ConsignmentBoxDetail,
   ConsignmentBoxItemDetail,
-  ItemWritePayload,
-} from "../types";
-import { ADMIN_ENDPOINTS } from "./consignment-admin.service";
+} from "../../../../types";
+import { ADMIN_ENDPOINTS } from "../../../../services/consignment-admin.service";
 
 /**
  * Boxes and their items, as sub-resources of a consignment.
@@ -120,43 +117,8 @@ export async function fetchBox(
   return readRecord<ConsignmentBoxDetail>(raw, "boxes");
 }
 
-/** `POST …/boxes` with `{ boxes: [...] }` — the endpoint takes a batch. */
-export function createBoxes(
-  consignmentId: number | string,
-  boxes: BoxWritePayload[],
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "POST",
-    ADMIN_ENDPOINTS.boxes(consignmentId),
-    { boxes },
-    { silent: true },
-  );
-}
 
-export function updateBox(
-  consignmentId: number | string,
-  boxId: number | string,
-  payload: BoxWritePayload,
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "POST",
-    ADMIN_ENDPOINTS.box(consignmentId, boxId),
-    { ...payload, _method: "PATCH" },
-    { silent: true },
-  );
-}
 
-export function deleteBox(
-  consignmentId: number | string,
-  boxId: number | string,
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "DELETE",
-    ADMIN_ENDPOINTS.box(consignmentId, boxId),
-    undefined,
-    { silent: true },
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /* Items                                                                      */
@@ -208,42 +170,5 @@ export async function fetchItem(
   return readRecord<ConsignmentBoxItemDetail>(raw, "items");
 }
 
-export function createItems(
-  consignmentId: number | string,
-  boxId: number | string,
-  items: ItemWritePayload[],
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "POST",
-    ADMIN_ENDPOINTS.items(consignmentId, boxId),
-    { items },
-    { silent: true },
-  );
-}
 
-export function updateItem(
-  consignmentId: number | string,
-  boxId: number | string,
-  itemId: number | string,
-  payload: ItemWritePayload,
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "POST",
-    ADMIN_ENDPOINTS.item(consignmentId, boxId, itemId),
-    { ...payload, _method: "PATCH" },
-    { silent: true },
-  );
-}
 
-export function deleteItem(
-  consignmentId: number | string,
-  boxId: number | string,
-  itemId: number | string,
-): Promise<MutationResult> {
-  return privateApiClient.mutate(
-    "DELETE",
-    ADMIN_ENDPOINTS.item(consignmentId, boxId, itemId),
-    undefined,
-    { silent: true },
-  );
-}

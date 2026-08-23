@@ -39,6 +39,7 @@ import {
   fromDateTimeInput,
   requiresForwarder,
   requiresState,
+  statusOptionsFor,
   toDateInput,
   toDateTimeInput,
   type ConsignmentLocation,
@@ -203,6 +204,17 @@ function LocationForm({
         : { ...EMPTY, status: statuses[0]?.value ?? "" },
     });
 
+  /**
+   * The record's own status is folded in when `next_statuses` omits it, so an
+   * edit opens on the value it actually holds instead of silently adopting the
+   * first allowed transition. On a create there is no record, so this is just
+   * `next_statuses`.
+   */
+  const statusOptions = React.useMemo(
+    () => statusOptionsFor(statuses, record?.status),
+    [statuses, record?.status],
+  );
+
   const values = useWatch({ control }) as FormValues;
   const hasPlace = values.have_new_location;
   const needsForwarder = requiresForwarder(values.status ?? "");
@@ -344,17 +356,14 @@ function LocationForm({
           {({ id }) => (
             <NativeSelect
               id={id}
-              disabled={busy || statuses.length === 0}
-              options={statuses.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
+              disabled={busy || statusOptions.length === 0}
+              options={statusOptions}
               {...register("status")}
             />
           )}
         </FieldShell>
 
-        {statuses.length === 0 ? (
+        {statusOptions.length === 0 ? (
           <p className="sm:col-span-2 -mt-2 text-xs text-muted-foreground">
             This request currently allows no status changes, so a location
             cannot be recorded against it.
@@ -531,7 +540,9 @@ function LocationForm({
         <Button type="button" variant="outline" onClick={onDone} disabled={busy}>
           Cancel
         </Button>
-        <Button type="submit" disabled={busy || statuses.length === 0}>
+        {/* Blocked only when there is genuinely nothing to choose — a record
+            whose own status is folded in always has at least one option. */}
+        <Button type="submit" disabled={busy || statusOptions.length === 0}>
           {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
           {record ? "Save changes" : "Add location"}
         </Button>

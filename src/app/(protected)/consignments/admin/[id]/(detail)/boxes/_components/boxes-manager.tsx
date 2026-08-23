@@ -1,13 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Boxes, ChevronDown, ChevronRight, Eye, Loader2, Plus } from "lucide-react";
+import { Boxes, ChevronDown, ChevronRight, Eye, Loader2 } from "lucide-react";
 // Edit and delete are commented out in the action cell below.
-// import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
-import { ConfirmDialog } from "@/shared/components/ui/confirm-dialog";
 import { Pagination } from "@/shared/components/ui/pagination";
 import {
   Table,
@@ -23,10 +21,8 @@ import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 import {
   useConsignmentBox,
   useConsignmentBoxes,
-  useDeleteBox,
 } from "../_hooks/use-consignment-boxes";
-import type { ConsignmentBoxDetail } from "../types";
-import { BoxFormDialog } from "./box-form-dialog";
+import type { ConsignmentBoxDetail } from "../../../../types";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
 import { ItemsSubTable } from "./items-sub-table";
 
@@ -39,18 +35,11 @@ import { ItemsSubTable } from "./items-sub-table";
  * every other box and item alongside it. So this talks to the box and item
  * sub-resources directly.
  *
- * Which actions appear is passed in rather than read here, so the same table can
- * render read-only for a consignment whose status no longer allows edits.
+ * **Read-only.** An accepted consignment's contents record what was shipped;
+ * they are composed and corrected on the request, before acceptance. So there
+ * is no permissions prop — with no writes to gate, a flag that can only ever
+ * hold one value would imply a choice this table does not offer.
  */
-
-export interface BoxPermissions {
-  canAddBoxes?: boolean;
-  canUpdateBoxes?: boolean;
-  canDeleteBoxes?: boolean;
-  canAddItems?: boolean;
-  canUpdateItems?: boolean;
-  canDeleteItems?: boolean;
-}
 
 const COLUMNS = 10;
 
@@ -68,20 +57,13 @@ function dimensions(box: ConsignmentBoxDetail): string {
 
 export interface BoxesManagerProps {
   consignmentId: number | string;
-  permissions?: BoxPermissions;
 }
 
-export function BoxesManager({
-  consignmentId,
-  permissions = {},
-}: BoxesManagerProps) {
+export function BoxesManager({ consignmentId }: BoxesManagerProps) {
   const { quantityCodeOptions } = useMetaOptions();
 
   const [page, setPage] = React.useState(1);
   const [expanded, setExpanded] = React.useState<Set<number>>(new Set());
-  const [dialog, setDialog] = React.useState<{ boxId?: number } | null>(null);
-  const [pendingDelete, setPendingDelete] =
-    React.useState<ConsignmentBoxDetail | null>(null);
 
   /**
    * The box being viewed, held as an **id** rather than the row object.
@@ -95,7 +77,6 @@ export function BoxesManager({
 
   const { data, isPending, isFetching } = useConsignmentBoxes(consignmentId, page);
   const viewBox = useConsignmentBox(consignmentId, viewingBoxId ?? undefined);
-  const deleteBox = useDeleteBox(consignmentId);
 
   const boxes = data?.boxes ?? [];
   const total = data?.meta?.total ?? boxes.length;
@@ -108,11 +89,6 @@ export function BoxesManager({
       return next;
     });
 
-  // Continues the sequence rather than restarting at 1, so numbering stays
-  // meaningful after a box in the middle is removed.
-  const nextBoxNo =
-    boxes.reduce((highest, box) => Math.max(highest, Number(box.box_no) || 0), 0) +
-    1;
 
   // Built from the fetched record, so the dialog shows every field the detail
   // endpoint returns rather than the subset the list carried.
@@ -148,12 +124,6 @@ export function BoxesManager({
             <Boxes aria-hidden className="size-4 text-primary" />
             Boxes ({total})
           </h2>
-          {permissions.canAddBoxes ? (
-            <Button size="sm" onClick={() => setDialog({})}>
-              <Plus className="size-4" />
-              Add box
-            </Button>
-          ) : null}
         </div>
 
         <div className={isFetching && !isPending ? "opacity-60" : undefined}>
@@ -259,27 +229,6 @@ export function BoxesManager({
                             >
                               <Eye className="size-4" />
                             </Button>
-                            {/* {permissions.canUpdateBoxes && box.id ? (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => setDialog({ boxId: box.id })}
-                                aria-label={`Edit box ${box.box_no}`}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                            ) : null} */}
-                            {/* {permissions.canDeleteBoxes && box.id ? (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => setPendingDelete(box)}
-                                aria-label={`Delete box ${box.box_no}`}
-                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            ) : null} */}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -290,7 +239,6 @@ export function BoxesManager({
                             <ItemsSubTable
                               consignmentId={consignmentId}
                               boxId={boxId}
-                              permissions={permissions}
                             />
                           </TableCell>
                         </TableRow>
@@ -314,15 +262,6 @@ export function BoxesManager({
         ) : null}
       </CardContent>
 
-      {dialog ? (
-        <BoxFormDialog
-          open
-          onClose={() => setDialog(null)}
-          consignmentId={consignmentId}
-          boxId={dialog.boxId}
-          nextBoxNo={nextBoxNo}
-        />
-      ) : null}
 
       <DetailDialog
         open={viewingBoxId !== null}
@@ -334,31 +273,6 @@ export function BoxesManager({
         rows={viewRows}
       />
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        onOpenChange={(open) => !open && setPendingDelete(null)}
-        title="Delete this box?"
-        description={
-          pendingDelete ? (
-            <>
-              Box{" "}
-              <span className="font-medium text-foreground">
-                {pendingDelete.box_no}
-              </span>{" "}
-              and every item inside it will be removed. This cannot be undone.
-            </>
-          ) : null
-        }
-        confirmLabel="Delete box"
-        onConfirm={async () => {
-          if (!pendingDelete?.id) return;
-          await deleteBox.mutateAsync(pendingDelete.id);
-
-          // Removing the only row on a trailing page would leave an empty
-          // table; decided here, where the row count is known.
-          if (boxes.length === 1 && page > 1) setPage(page - 1);
-        }}
-      />
     </Card>
   );
 }

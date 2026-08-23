@@ -1,13 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Eye, MapPin, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Eye, MapPin, TriangleAlert } from "lucide-react";
 
 import { isApiError } from "@/shared/api/errors";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
-import { ConfirmDialog } from "@/shared/components/ui/confirm-dialog";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Pagination } from "@/shared/components/ui/pagination";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -21,11 +20,8 @@ import {
 } from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/utils";
 
-import { useConsignmentRequest } from "../../../../_hooks/use-consignment-request";
-import { useConsignmentPermissions } from "../../../../_hooks/use-consignment-permissions";
 import {
   useConsignmentLocations,
-  useDeleteConsignmentLocation,
 } from "../_hooks/use-consignment-locations";
 import {
   locationPlace,
@@ -33,7 +29,6 @@ import {
   statusLabel,
   type ConsignmentLocation,
 } from "../types";
-import { LocationFormDialog } from "./location-form-dialog";
 import { LocationViewDialog } from "./location-view-dialog";
 
 /**
@@ -60,25 +55,14 @@ const STICKY_ACTIONS =
   "sticky right-0 border-l border-border/70 bg-inherit sm:static sm:border-l-0";
 
 export function LocationsTab({ id }: { id: number }) {
-  const requestId = String(id);
+  const consignmentId = String(id);
 
   const [page, setPage] = React.useState(1);
   const [viewing, setViewing] = React.useState<ConsignmentLocation | null>(null);
-  const [editing, setEditing] = React.useState<ConsignmentLocation | null>(null);
-  const [creating, setCreating] = React.useState(false);
-  const [pendingDelete, setPendingDelete] =
-    React.useState<ConsignmentLocation | null>(null);
 
-  const request = useConsignmentRequest(id);
-  const { canUpdate } = useConsignmentPermissions();
-  const query = useConsignmentLocations(requestId, page, PER_PAGE);
-  const deleteLocation = useDeleteConsignmentLocation(requestId);
+  const query = useConsignmentLocations(consignmentId, page, PER_PAGE);
 
   const rows = React.useMemo(() => query.data?.items ?? [], [query.data]);
-  const statuses = React.useMemo(
-    () => request.data?.request.next_statuses ?? [],
-    [request.data],
-  );
 
   if (query.isLoading) return <LocationsTabSkeleton />;
 
@@ -118,27 +102,13 @@ export function LocationsTab({ id }: { id: number }) {
             Where this shipment has been, and the status each scan moved it to
           </p>
         </div>
-        {canUpdate ? (
-          <Button onClick={() => setCreating(true)} className="w-full sm:w-auto">
-            <Plus className="size-4" aria-hidden />
-            Add Location
-          </Button>
-        ) : null}
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={MapPin}
           title="No locations recorded"
-          description="Pickup, transit and delivery scans for this request will appear here."
-          action={
-            canUpdate ? (
-              <Button onClick={() => setCreating(true)}>
-                <Plus className="size-4" aria-hidden />
-                Add Location
-              </Button>
-            ) : undefined
-          }
+          description="Pickup, transit and delivery scans for this consignment will appear here."
         />
       ) : (
         <Card className="overflow-hidden">
@@ -193,7 +163,7 @@ export function LocationsTab({ id }: { id: number }) {
 
                       <span className="mt-1.5 block sm:hidden">
                         <Badge variant="secondary" className="font-medium">
-                          {statusLabel(row.status, statuses)}
+                          {statusLabel(row.status)}
                         </Badge>
                       </span>
                     </TableCell>
@@ -210,7 +180,7 @@ export function LocationsTab({ id }: { id: number }) {
                         variant="secondary"
                         className="max-w-40 whitespace-normal text-left font-medium leading-snug"
                       >
-                        {statusLabel(row.status, statuses)}
+                        {statusLabel(row.status)}
                       </Badge>
                     </TableCell>
 
@@ -231,30 +201,6 @@ export function LocationsTab({ id }: { id: number }) {
                           <Eye className="size-3.5" aria-hidden />
                           <span className="sr-only">View this location</span>
                         </Button>
-                        {canUpdate ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditing(row)}
-                              className="size-7 text-muted-foreground hover:text-primary"
-                            >
-                              <Pencil className="size-3.5" aria-hidden />
-                              <span className="sr-only">Edit this location</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setPendingDelete(row)}
-                              className="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            >
-                              <Trash2 className="size-3.5" aria-hidden />
-                              <span className="sr-only">
-                                Delete this location
-                              </span>
-                            </Button>
-                          </>
-                        ) : null}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -273,53 +219,13 @@ export function LocationsTab({ id }: { id: number }) {
       )}
 
       <LocationViewDialog
-        requestId={requestId}
+        consignmentId={consignmentId}
         location={viewing}
-        statuses={statuses}
         open={Boolean(viewing)}
         onOpenChange={(open) => !open && setViewing(null)}
       />
 
-      {/* Create and edit are the same dialog; `location` being null is what
-          puts it in create mode. Two mounts rather than one so opening the
-          editor never inherits a half-filled create form. */}
-      <LocationFormDialog
-        requestId={requestId}
-        location={null}
-        statuses={statuses}
-        open={creating}
-        onOpenChange={setCreating}
-      />
 
-      <LocationFormDialog
-        requestId={requestId}
-        location={editing}
-        statuses={statuses}
-        open={Boolean(editing)}
-        onOpenChange={(open) => !open && setEditing(null)}
-      />
-
-      <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        onOpenChange={(open) => !open && setPendingDelete(null)}
-        title="Delete this location?"
-        description={
-          pendingDelete
-            ? `${pendingDelete.location || "This scan"} · ${locationPlace(pendingDelete)}. This cannot be undone.`
-            : undefined
-        }
-        confirmLabel="Delete"
-        tone="destructive"
-        onConfirm={async () => {
-          if (!pendingDelete) return;
-          await deleteLocation.mutateAsync(pendingDelete.id);
-          setPendingDelete(null);
-
-          // Deleting the only row on the last page would otherwise strand the
-          // user on a page that no longer exists.
-          if (rows.length === 1 && page > 1) setPage((current) => current - 1);
-        }}
-      />
     </div>
   );
 }

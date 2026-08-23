@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Loader2, Plus } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 // Edit and delete are commented out in the action cell below.
-// import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { ConfirmDialog } from "@/shared/components/ui/confirm-dialog";
 import {
   Table,
   TableBody,
@@ -21,12 +19,8 @@ import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 import {
   useBoxItem,
   useBoxItems,
-  useDeleteItem,
 } from "../_hooks/use-consignment-boxes";
-import type { ConsignmentBoxItemDetail } from "../types";
-import type { BoxPermissions } from "./boxes-manager";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
-import { ItemFormDialog } from "./item-form-dialog";
 
 /**
  * The items inside one box, shown when its row is expanded.
@@ -42,22 +36,16 @@ const COLUMNS = 9;
 export interface ItemsSubTableProps {
   consignmentId: number | string;
   boxId: number;
-  permissions: BoxPermissions;
 }
 
 export function ItemsSubTable({
   consignmentId,
   boxId,
-  permissions,
 }: ItemsSubTableProps) {
   const { genderOptions, quantityCodeOptions } = useMetaOptions();
 
   const { data, isPending } = useBoxItems(consignmentId, boxId);
-  const deleteItem = useDeleteItem(consignmentId, boxId);
 
-  const [dialog, setDialog] = React.useState<{ itemId?: number } | null>(null);
-  const [pendingDelete, setPendingDelete] =
-    React.useState<ConsignmentBoxItemDetail | null>(null);
 
   /**
    * The item being viewed, held as an **id** rather than the row object.
@@ -104,12 +92,6 @@ export function ItemsSubTable({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Items ({items.length})
         </p>
-        {permissions.canAddItems ? (
-          <Button variant="outline" size="sm" onClick={() => setDialog({})}>
-            <Plus className="size-3.5" />
-            Add item
-          </Button>
-        ) : null}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -179,27 +161,6 @@ export function ItemsSubTable({
                       >
                         <Eye className="size-3.5" />
                       </Button>
-                      {/* {permissions.canUpdateItems && item.id ? (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setDialog({ itemId: item.id })}
-                          aria-label={`Edit ${item.item_name}`}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                      ) : null} */}
-                      {/* {permissions.canDeleteItems && item.id ? (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setPendingDelete(item)}
-                          aria-label={`Delete ${item.item_name}`}
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      ) : null} */}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -209,15 +170,6 @@ export function ItemsSubTable({
         </Table>
       </div>
 
-      {dialog ? (
-        <ItemFormDialog
-          open
-          onClose={() => setDialog(null)}
-          consignmentId={consignmentId}
-          boxId={boxId}
-          itemId={dialog.itemId}
-        />
-      ) : null}
 
       <DetailDialog
         open={viewingItemId !== null}
@@ -229,25 +181,6 @@ export function ItemsSubTable({
         rows={viewRows}
       />
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        onOpenChange={(open) => !open && setPendingDelete(null)}
-        title="Delete this item?"
-        description={
-          pendingDelete ? (
-            <>
-              <span className="font-medium text-foreground">
-                {pendingDelete.item_name}
-              </span>{" "}
-              will be removed from this box. This cannot be undone.
-            </>
-          ) : null
-        }
-        confirmLabel="Delete item"
-        onConfirm={async () => {
-          if (pendingDelete?.id) await deleteItem.mutateAsync(pendingDelete.id);
-        }}
-      />
     </div>
   );
 }

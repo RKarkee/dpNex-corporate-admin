@@ -1,26 +1,23 @@
-import type { Metadata } from "next";
-import { MapPin } from "lucide-react";
+"use client";
 
-import { TabPlaceholder } from "../_components/tab-placeholder";
+import * as React from "react";
 
-export const metadata: Metadata = {
-  title: "Locations",
-};
+import { LocationsTab } from "./_components/locations-tab";
 
 /**
  * The Locations tab.
  *
- * A landing page for now. `GET /corporate/consignments/{id}/locations` is the
- * endpoint this will read; whether it returns tracking scans or address points
- * decides the layout, so it stays a placeholder until a real response settles
- * that.
+ * Mirrors the Boxes page: a client component, because `React.use(params)`
+ * unwraps the promise during render and the panel below is interactive anyway.
  */
-export default function ConsignmentLocationsPage() {
-  return (
-    <TabPlaceholder
-      icon={MapPin}
-      title="Locations are not connected yet"
-      description="Pickup, transit and delivery points for this consignment will appear here."
-    />
-  );
+export default function ConsignmentLocationsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // Next 15+ hands params in as a promise; `use()` unwraps it during render.
+  const { id } = React.use(params);
+
+  // The layout has already rejected an unparseable id before this mounts.
+  return <LocationsTab id={Number(id)} />;
 }

@@ -14,7 +14,6 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
-import type { NextStatusOption } from "../../../../types";
 import { useConsignmentLocation } from "../_hooks/use-consignment-locations";
 import {
   shortDateTime,
@@ -27,22 +26,22 @@ import {
  *
  * Re-reads the record on open rather than trusting the list row — the list is
  * paginated and may be a page behind a status another user has since moved.
+ *
+ * Read-only, like the tab it opens from: an accepted consignment's scans are
+ * history, recorded against the request while it was being handled.
  */
 export function LocationViewDialog({
-  requestId,
+  consignmentId,
   location: row,
-  statuses,
   open,
   onOpenChange,
 }: {
-  requestId: string;
+  consignmentId: string;
   location: ConsignmentLocation | null;
-  /** Used to turn a stored status code into the API's own label. */
-  statuses: NextStatusOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const detail = useConsignmentLocation(requestId, row?.id, row ?? undefined);
+  const detail = useConsignmentLocation(consignmentId, row?.id, row ?? undefined);
   const doc = (detail.data as ConsignmentLocation | undefined) ?? row;
 
   return (
@@ -59,7 +58,7 @@ export function LocationViewDialog({
         {doc ? (
           <div className="space-y-5">
             <Badge variant="secondary" className="font-medium">
-              {statusLabel(doc.status, statuses)}
+              {statusLabel(doc.status)}
             </Badge>
 
             {/* One column on a phone: these values (a place name, a full
