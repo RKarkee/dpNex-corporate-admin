@@ -28,11 +28,11 @@ import {
 
 import { StatCard, type StatTone } from "@/app/(protected)/_components/stat-card";
 import { useConsignmentBillingStatement } from "../_hooks/use-consignment-billing-statement";
-import { downloadCsv } from "../_lib/csv";
 import { safeFileName } from "../_lib/download-file";
 import { formatEnumLabel, formatInvoiceAmount, formatInvoiceDate } from "../_lib/format-invoice";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { PaymentStatusBadge } from "./payment-status-badge";
+import { downloadCsv } from "@/shared/lib/csv";
 
 const TONES: StatTone[] = ["navy", "crimson", "orange", "navy", "crimson"];
 

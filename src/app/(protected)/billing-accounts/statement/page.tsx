@@ -11,9 +11,9 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 
 import { useBillingStatement } from "../_hooks/use-billing-statement";
-import { downloadCsv } from "../_lib/csv";
 import { safeFileName } from "../_lib/download-file";
 import { StatementResults } from "./_components/statement-results";
+import { downloadCsv } from "@/shared/lib/csv";
 
 /** `Date` → `YYYY-MM-DD`, what both the `<input type="date">` and the API want. */
 function toIsoDate(date: Date): string {
