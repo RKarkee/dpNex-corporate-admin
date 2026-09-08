@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Download, Eye, Loader2, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -16,19 +17,17 @@ import type { Invoice } from "../types";
 /**
  * View and download-as-PDF for one row, behind a single trigger.
  *
- * Unlike `billing-accounts`' row actions, "View bill" here opens a dialog
- * rather than navigating to a nested route — this tab follows the same
- * Documents/Boxes convention the rest of the consignment admin detail page
- * uses for viewing one record from within a tab.
+ * "View bill" opens on its own page — `/consignments/admin/{id}/billing/
+ * {invoiceId}` — rather than a dialog: a bill is a document to read or print,
+ * and `asChild` + `Link` makes it a real anchor, so middle-click and "open in
+ * new tab" both work.
  */
 export function InvoiceRowActions({
   consignmentId,
   invoice,
-  onView,
 }: {
   consignmentId: number | string;
   invoice: Invoice;
-  onView: (invoice: Invoice) => void;
 }) {
   const downloadPdf = useDownloadConsignmentInvoicePdf(consignmentId);
 
@@ -50,9 +49,11 @@ export function InvoiceRowActions({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onView(invoice)}>
-          <Eye />
-          View bill
+        <DropdownMenuItem asChild>
+          <Link href={`/consignments/admin/${consignmentId}/billing/${invoice.id}`}>
+            <Eye />
+            View bill
+          </Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem

@@ -19,12 +19,15 @@ import {
 import { cn } from "@/shared/lib/utils";
 
 import {
+  formatEnumLabel,
   formatInvoiceAmount,
   formatInvoiceDate,
   formatInvoiceNumber,
 } from "../_lib/format-invoice";
+import { AdjustmentStatusBadge } from "./adjustment-status-badge";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
-import type { Invoice, InvoiceLine, InvoiceParty } from "../types";
+import { PaymentStatusBadge } from "./payment-status-badge";
+import type { Invoice, InvoiceAdjustment, InvoiceLine, InvoiceParty, StatementPayment } from "../types";
 
 /**
  * The full bill: header totals, the two parties, shipment reference facts,
@@ -35,11 +38,23 @@ import type { Invoice, InvoiceLine, InvoiceParty } from "../types";
  * line, since every invoice in this tab already belongs to the one
  * consignment the dialog was opened from).
  */
-export function InvoiceDetailContent({ invoice }: { invoice: Invoice }) {
-  const lines = invoice.details ?? [];
-  const infoLines = lines.filter((line) => line.is_monetary !== "Y");
-  const chargeLines = lines.filter((line) => line.is_monetary === "Y");
-  const allocations = invoice.allocations ?? [];
+export function InvoiceDetailContent({
+  invoice,
+  particulars,
+  payments,
+  adjustments,
+}: {
+  invoice: Invoice;
+  /** Overrides `invoice.details` when the caller has fetched the line items independently — see `.../particulars`. */
+  particulars?: InvoiceLine[];
+  /** Overrides `invoice.allocations` when the caller has fetched the payments independently — see `.../payments`. */
+  payments?: StatementPayment[];
+  /** No embedded field backs this one — see `.../adjustments`. */
+  adjustments?: InvoiceAdjustment[];
+}) {
+  const lines = particulars ?? invoice.details ?? [];
+  const paymentRows = payments ?? allocationsAsPayments(invoice.allocations);
+  const adjustmentRows = adjustments ?? [];
 
   const amounts = invoice.amounts;
   const outstanding = Number(amounts.outstanding);
@@ -74,26 +89,7 @@ export function InvoiceDetailContent({ invoice }: { invoice: Invoice }) {
         <PartyCard title="Billed to" party={invoice.buyer} />
       </div>
 
-      {infoLines.length > 0 ? (
-        <Card>
-          <CardContent className="py-6">
-            <SectionHeading>Shipment details</SectionHeading>
-            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {infoLines.map((line) => (
-                <div key={line.id}>
-                  <dt className="text-sm text-muted-foreground">{line.particular}</dt>
-                  <dd className="font-medium text-foreground">
-                    {line.display_value?.trim() || "—"}
-                    {line.quantity_code ? ` ${line.quantity_code}` : ""}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {chargeLines.length > 0 ? <ChargesTable lines={chargeLines} currency={invoice.currency} /> : null}
+      <ParticularsTable lines={lines} currency={invoice.currency} />
 
       <Card>
         <CardContent className="py-6">
@@ -132,35 +128,103 @@ export function InvoiceDetailContent({ invoice }: { invoice: Invoice }) {
         </CardContent>
       </Card>
 
-      {allocations.length > 0 ? (
+      {adjustmentRows.length > 0 ? (
         <Card>
           <CardContent className="p-0">
             <div className="border-b border-border p-4">
-              <h3 className="text-base font-semibold text-foreground">Payments applied</h3>
+              <h3 className="text-base font-semibold text-foreground">Adjustments</h3>
             </div>
             <div className="overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-card hover:bg-transparent">
-                    <TableHead>Payment</TableHead>
-                    <TableHead className="hidden sm:table-cell">Applied on</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead className="hidden sm:table-cell">Date</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allocations.map((allocation) => (
-                    <TableRow key={allocation.id} className="bg-card">
-                      <TableCell className="font-medium text-foreground">
-                        #{allocation.payment_id}
+                  {adjustmentRows.map((adjustment) => (
+                    <TableRow key={adjustment.id} className="bg-card">
+                      <TableCell className="max-w-xs">
+                        <p className="truncate font-medium text-foreground">{adjustment.reason}</p>
+                        {adjustment.description ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {adjustment.description}
+                          </p>
+                        ) : null}
+                        {adjustment.approved_by ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            Approved by {adjustment.approved_by}
+                          </p>
+                        ) : null}
+                        {/* Carries the dropped "Date" column on small screens. */}
+                        <p className="text-xs text-muted-foreground sm:hidden">
+                          {formatInvoiceDate(adjustment.created_at)}
+                        </p>
+                      </TableCell>
+                      <TableCell className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
+                        {formatInvoiceDate(adjustment.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <AdjustmentStatusBadge status={adjustment.status} label={adjustment.status_label} />
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-foreground">
+                        {formatInvoiceAmount(adjustment.amount, invoice.currency)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {paymentRows.length > 0 ? (
+        <Card>
+          <CardContent className="p-0">
+            <div className="border-b border-border p-4">
+              <h3 className="text-base font-semibold text-foreground">Payments</h3>
+            </div>
+            <div className="overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-card hover:bg-transparent">
+                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden sm:table-cell">Channel</TableHead>
+                    <TableHead className="hidden text-muted-foreground md:table-cell">
+                      Transaction
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paymentRows.map((payment) => (
+                    <TableRow key={payment.id} className="bg-card">
+                      <TableCell className="whitespace-nowrap text-foreground">
+                        {formatInvoiceDate(payment.payment_date)}
+                        {/* Carries the dropped columns on small screens. */}
                         <p className="text-xs font-normal text-muted-foreground sm:hidden">
-                          {formatInvoiceDate(allocation.allocated_on)}
+                          {formatEnumLabel(payment.payment_channel)}
                         </p>
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground sm:table-cell">
-                        {formatInvoiceDate(allocation.allocated_on)}
+                        {formatEnumLabel(payment.payment_channel)}
+                        {payment.payment_source ? (
+                          <p className="text-xs">{formatEnumLabel(payment.payment_source)}</p>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {payment.transaction_id ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <PaymentStatusBadge status={payment.status} />
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums text-foreground">
-                        {formatInvoiceAmount(allocation.amount, invoice.currency)}
+                        {formatInvoiceAmount(payment.amount, invoice.currency)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -183,18 +247,54 @@ export function InvoiceDetailContent({ invoice }: { invoice: Invoice }) {
   );
 }
 
-function ChargesTable({ lines, currency }: { lines: InvoiceLine[]; currency: string }) {
+/**
+ * Turns the invoice detail read's embedded `allocations` into the same shape
+ * the dedicated `.../payments` endpoint answers with, so the payments table
+ * has something to show while that second request is still in flight or if
+ * it fails outright — the same fallback role `invoice.details` plays for
+ * `particulars`. Channel, source and transaction id are not part of an
+ * allocation, so those columns simply read "—" until the real payments
+ * response replaces this.
+ */
+function allocationsAsPayments(allocations: Invoice["allocations"]): StatementPayment[] {
+  return (allocations ?? []).map((allocation) => ({
+    id: allocation.payment_id,
+    payment_date: allocation.allocated_on,
+    amount: allocation.amount,
+    payment_channel: null,
+    payment_source: null,
+    transaction_id: null,
+    status: "",
+  }));
+}
+
+/**
+ * Every particular the bill carries, in one table — info rows (`MAWB No.`,
+ * port of destination…) and charge rows (`is_monetary: "Y"`) alike, sorted
+ * by `sort_order` the same way the API returns them.
+ *
+ * A single table rather than the info-grid-plus-charges-table split this
+ * used before: `GET .../particulars` answers with the full, flat list, and
+ * that is what this renders — a "Value" column carries what an info row has
+ * to say (its `display_value`), Qty/Rate/Amount carry what a charge row has
+ * to say, and each row leaves the columns that do not apply to it as "—"
+ * rather than a misleading zero.
+ */
+function ParticularsTable({ lines, currency }: { lines: InvoiceLine[]; currency: string }) {
+  const sorted = [...lines].sort((a, b) => a.sort_order - b.sort_order);
+
   return (
     <Card>
       <CardContent className="p-0">
         <div className="border-b border-border p-4">
-          <h3 className="text-base font-semibold text-foreground">Charges</h3>
+          <h3 className="text-base font-semibold text-foreground">Particulars</h3>
         </div>
         <div className="overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-card hover:bg-transparent">
                 <TableHead>Particular</TableHead>
+                <TableHead className="hidden sm:table-cell">Value</TableHead>
                 <TableHead className="hidden text-right sm:table-cell">Qty</TableHead>
                 <TableHead className="hidden text-right sm:table-cell">Rate</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -202,33 +302,46 @@ function ChargesTable({ lines, currency }: { lines: InvoiceLine[]; currency: str
             </TableHeader>
 
             <TableBody>
-              {lines.length === 0 ? (
-                <TableEmpty colSpan={4}>No charges on this invoice.</TableEmpty>
+              {sorted.length === 0 ? (
+                <TableEmpty colSpan={5}>No particulars on this invoice.</TableEmpty>
               ) : null}
 
-              {lines.map((line) => {
-                const hasQuantity = Number(line.quantity) !== 0;
+              {sorted.map((line) => {
+                const isMonetary = line.is_monetary === "Y";
+                const hasQuantity = isMonetary && Number(line.quantity) !== 0;
+                const value = line.display_value?.trim()
+                  ? `${line.display_value.trim()}${line.quantity_code ? ` ${line.quantity_code}` : ""}`
+                  : "—";
 
                 return (
                   <TableRow key={line.id} className="bg-card">
                     <TableCell className="max-w-xs">
                       <p className="truncate font-medium text-foreground">{line.particular}</p>
                       {line.description ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {line.description}
-                        </p>
+                        <p className="truncate text-xs text-muted-foreground">{line.description}</p>
+                      ) : null}
+                      {/* Carries the dropped "Value" column on small screens. */}
+                      {!isMonetary && value !== "—" ? (
+                        <p className="truncate text-xs text-muted-foreground sm:hidden">{value}</p>
                       ) : null}
                     </TableCell>
+
+                    <TableCell className="hidden max-w-40 truncate text-muted-foreground sm:table-cell">
+                      {isMonetary ? "—" : value}
+                    </TableCell>
+
                     <TableCell className="hidden text-right tabular-nums text-muted-foreground sm:table-cell">
                       {hasQuantity
                         ? `${formatInvoiceNumber(line.quantity)}${line.quantity_code ? ` ${line.quantity_code}` : ""}`
                         : "—"}
                     </TableCell>
+
                     <TableCell className="hidden text-right tabular-nums text-muted-foreground sm:table-cell">
                       {hasQuantity ? formatInvoiceAmount(line.rate, currency) : "—"}
                     </TableCell>
+
                     <TableCell className="text-right font-medium tabular-nums text-foreground">
-                      {formatInvoiceAmount(line.amount, currency)}
+                      {isMonetary ? formatInvoiceAmount(line.amount, currency) : "—"}
                     </TableCell>
                   </TableRow>
                 );

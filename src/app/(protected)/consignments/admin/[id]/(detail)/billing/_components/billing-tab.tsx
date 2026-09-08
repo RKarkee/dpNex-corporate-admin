@@ -12,7 +12,6 @@ import { Pagination } from "@/shared/components/ui/pagination";
 import { useConsignmentInvoices } from "../_hooks/use-consignment-invoices";
 import type { Invoice } from "../types";
 import { BillingSummary } from "./billing-summary";
-import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { InvoicesErrorState } from "./invoices-error-state";
 import { InvoicesTable, InvoicesTableSkeleton } from "./invoices-table";
 import { StatementDialog } from "./statement-dialog";
@@ -30,14 +29,16 @@ function matches(invoice: Invoice, term: string): boolean {
  *
  * A standalone sibling of `billing-accounts` — same list/detail/PDF/summary/
  * statement feature set, scoped to one consignment via
- * `/corporate/consignments/{id}/billings`. "View bill" and "Bill statement"
- * open as dialogs rather than nested routes, following the same convention
- * the Documents and Boxes tabs use for viewing one record from within a tab.
+ * `/corporate/consignments/{id}/billings`. "View bill" opens its own page
+ * (`/consignments/admin/{id}/billing/{invoiceId}`, outside the tab shell) —
+ * a bill is a document to read or print, not a record best viewed inline.
+ * "Bill statement" stays a dialog, following the same convention the
+ * Documents and Boxes tabs use for viewing something from within a tab
+ * without leaving it.
  */
 export function BillingTab({ consignmentId }: { consignmentId: string }) {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
-  const [viewing, setViewing] = React.useState<Invoice | null>(null);
   const [statementOpen, setStatementOpen] = React.useState(false);
 
   const { data, isPending, isError, error, isFetching, refetch } = useConsignmentInvoices(
@@ -100,7 +101,7 @@ export function BillingTab({ consignmentId }: { consignmentId: string }) {
             </div>
 
             <div className={isFetching ? "opacity-60 transition-opacity" : undefined}>
-              <InvoicesTable consignmentId={consignmentId} invoices={visible} onView={setViewing} />
+              <InvoicesTable consignmentId={consignmentId} invoices={visible} />
             </div>
 
             <div className="border-t border-border px-4">
@@ -124,13 +125,6 @@ export function BillingTab({ consignmentId }: { consignmentId: string }) {
           </CardContent>
         </Card>
       )}
-
-      <InvoiceDetailDialog
-        consignmentId={consignmentId}
-        invoice={viewing}
-        open={Boolean(viewing)}
-        onOpenChange={(open) => !open && setViewing(null)}
-      />
 
       <StatementDialog
         consignmentId={consignmentId}

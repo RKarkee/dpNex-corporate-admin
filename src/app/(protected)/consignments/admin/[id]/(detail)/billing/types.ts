@@ -36,6 +36,34 @@ export interface InvoiceLine {
   [key: string]: unknown;
 }
 
+/**
+ * One adjustment applied to a bill — a manual credit, correction or waiver
+ * approved against it. `amounts.adjustments` on `Invoice` is only the
+ * summed total; this is the itemised list behind that figure, from
+ * `GET .../billings/{billingId}/adjustments`.
+ *
+ * **Unverified schema** — no response has been confirmed for this endpoint
+ * yet. Field names follow the same conventions the rest of this bill uses
+ * (`status`/`status_label` for an approval state, decimal-string amounts),
+ * and every field the table reads is defaulted defensively in the service.
+ */
+export interface InvoiceAdjustment {
+  id: number | string;
+  reason: string;
+  description: string | null;
+  amount: string;
+  type: string | null;
+
+  status: string;
+  status_label: string;
+
+  created_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+
+  [key: string]: unknown;
+}
+
 export interface InvoiceAllocation {
   id: number;
   payment_id: number;

@@ -30,10 +30,9 @@ const STICKY_ACTIONS = "sticky right-0 border-l border-border/70 bg-inherit sm:s
 export interface InvoicesTableProps {
   consignmentId: number | string;
   invoices: Invoice[];
-  onView: (invoice: Invoice) => void;
 }
 
-export function InvoicesTable({ consignmentId, invoices, onView }: InvoicesTableProps) {
+export function InvoicesTable({ consignmentId, invoices }: InvoicesTableProps) {
   return (
     <div className="overflow-hidden">
       <Table>
@@ -82,7 +81,7 @@ export function InvoicesTable({ consignmentId, invoices, onView }: InvoicesTable
 
               <TableCell className={cn("w-px", STICKY_ACTIONS)}>
                 <div className="flex justify-end">
-                  <InvoiceRowActions consignmentId={consignmentId} invoice={invoice} onView={onView} />
+                  <InvoiceRowActions consignmentId={consignmentId} invoice={invoice} />
                 </div>
               </TableCell>
             </TableRow>
