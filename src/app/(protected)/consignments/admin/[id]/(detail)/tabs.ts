@@ -2,6 +2,7 @@ import {
   Boxes,
   FileText,
   MapPin,
+  Receipt,
   ScrollText,
   type LucideIcon,
 } from "lucide-react";
@@ -39,6 +40,7 @@ export const DETAIL_TABS: DetailTab[] = [
   { segment: "boxes", label: "Boxes", icon: Boxes },
   { segment: "documents", label: "Documents", icon: FileText },
   { segment: "locations", label: "Locations", icon: MapPin },
+  { segment: "billing", label: "Billing", icon: Receipt },
 ];
 
 /** `/consignments/admin/10` or `/consignments/admin/10/documents`. */

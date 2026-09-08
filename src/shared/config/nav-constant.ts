@@ -1,5 +1,6 @@
 import {
   FileText,
+  Landmark,
   LayoutDashboard,
   Package,
   Shield,
@@ -63,6 +64,19 @@ export const sidebarNav: NavItem[] = [
         anyPermission: ["approve_consignment", "view_any_consignment"],
       },
     ],
+  },
+  {
+    title: "Billing Accounts",
+    href: "/billing-accounts",
+    icon: Landmark,
+    // Permission names are unconfirmed for this CRM-admin resource — see
+    // `billing-accounts/permissions.ts` for why several are listed together.
+    // anyPermission: [
+    //   "view_billing_account",
+    //   "view_any_billing_account",
+    //   "view_customer_billing_account",
+    //   "crm_view_billing_account",
+    // ],
   },
   {
     title:"Profile",
