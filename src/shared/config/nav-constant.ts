@@ -90,7 +90,6 @@ export const sidebarNav: NavItem[] = [
       "request_credit_limit",
       "request_discounts",
       "request_corporate_setting_update",
-      "request_profile_update",
     ],
   },
   {

@@ -12,7 +12,6 @@ export const APPROVAL_TYPES = [
   "CREDIT_LIMIT_INCREASE",
   "DISCOUNT",
   "CORPORATE_INFO_UPDATE",
-  "PROFILE_UPDATE",
 ] as const;
 
 export type ApprovalType = (typeof APPROVAL_TYPES)[number];

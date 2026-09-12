@@ -63,7 +63,7 @@ function formFieldFor(
   if (name === "credit_limit" || name === "discount_type" || name === "discount_value") {
     return name;
   }
-  if (type === "CORPORATE_INFO_UPDATE" || type === "PROFILE_UPDATE") {
+  if (type === "CORPORATE_INFO_UPDATE") {
     return `info.${name}`;
   }
 
@@ -187,7 +187,7 @@ export function CreateRequestDialog({
             <CreditLimitFields form={form} />
           ) : null}
           {type === "DISCOUNT" ? <DiscountFields form={form} /> : null}
-          {type === "CORPORATE_INFO_UPDATE" || type === "PROFILE_UPDATE" ? (
+          {type === "CORPORATE_INFO_UPDATE" ? (
             <InfoUpdateFields form={form} type={type} />
           ) : null}
 

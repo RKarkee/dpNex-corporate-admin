@@ -19,7 +19,6 @@ export const APPROVAL_TYPE_PERMISSIONS: Record<ApprovalType, string> = {
   CREDIT_LIMIT_INCREASE: "request_credit_limit",
   DISCOUNT: "request_discounts",
   CORPORATE_INFO_UPDATE: "request_corporate_setting_update",
-  PROFILE_UPDATE: "request_profile_update",
 };
 
 /**
