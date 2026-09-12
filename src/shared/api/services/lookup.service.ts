@@ -43,6 +43,8 @@ const PATHS = {
   corporates: "/corporates/get-lists",
   customers: "/customers/get-lists",
   consignments: "/consignments/get-lists",
+  assignables: "/assignables/get-lists",
+  corporateUsers: "/corporate/users/get-lists",
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -186,6 +188,26 @@ export function fetchConsignments(page: number, perPage: number, query?: string)
   return fetchLookup(PATHS.consignments, page, perPage, query, "q");
 }
 
+/**
+ * Staff who can own a support ticket.
+ *
+ * A table of users rather than a `/meta` enum, which is why it is here: who a
+ * caller may assign to depends on who they are, so the server decides the list.
+ */
+export function fetchAssignables(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.assignables, page, perPage, query, "q");
+}
+
+/**
+ * Users inside the caller's own corporate — who raised a ticket, not who owns it.
+ *
+ * Scoped by the `X-Corporate-Code` header like every other `/corporate` route,
+ * so this can only ever list colleagues.
+ */
+export function fetchCorporateUsers(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.corporateUsers, page, perPage, query, "q");
+}
+
 /* -------------------------------------------------------------------------- */
 /* Resolving one stored code to its label                                     */
 /* -------------------------------------------------------------------------- */
@@ -206,7 +228,9 @@ export type LookupKind =
   | "forwarder"
   | "corporate"
   | "customer"
-  | "consignment";
+  | "consignment"
+  | "assignable"
+  | "corporateUser";
 
 const FETCHERS: Record<
   LookupKind,
@@ -221,6 +245,8 @@ const FETCHERS: Record<
   corporate: fetchCorporates,
   customer: fetchCustomers,
   consignment: fetchConsignments,
+  assignable: fetchAssignables,
+  corporateUser: fetchCorporateUsers,
 };
 
 const RESOLVE_PAGE_SIZE = 20;

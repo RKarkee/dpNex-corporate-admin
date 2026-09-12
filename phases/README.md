@@ -13,6 +13,7 @@ The Corporate Admin Portal is built in phases. Each has its own file here with s
 | [5](phase-5-dashboard-tracking-reports.md) | Dashboard, Tracking, Reports | ⬜ Not started |
 | [6](phase-6-production-hardening.md) | Mobile nav, code splitting, tests, CI | ⬜ Not started |
 | [7](phase-7-approval-requests.md) | Approval Requests — credit limit, discount, info updates | ✅ Code complete — awaiting your verification |
+| [8](phase-8-support-tickets.md) | Support Tickets — 20-filter queue, raise, close | ✅ Code complete — awaiting your verification |
 
 ## The gate
 

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { NativeSelect } from "@/shared/components/ui/native-select";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -78,5 +79,91 @@ export function FilterGroup({ title, className, children }: FilterGroupProps) {
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Boolean-ish filters                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Any / Yes / No, for a filter the API takes as a real boolean.
+ *
+ * Three states rather than a checkbox, because "not filtering by this" and "no"
+ * are different questions: a checkbox can only ever ask one of them, and the
+ * unchecked box gives no way to say "show me the unresolved ones".
+ *
+ * The value is the string the URL carries — `""`, `"true"`, `"false"` — so it
+ * round-trips without a parse step on either side.
+ */
+export interface TriStateSelectProps {
+  value: string;
+  onChange: (next: string) => void;
+  id?: string;
+  anyLabel?: string;
+  yesLabel?: string;
+  noLabel?: string;
+  disabled?: boolean;
+}
+
+export function TriStateSelect({
+  value,
+  onChange,
+  id,
+  anyLabel = "Any",
+  yesLabel = "Yes",
+  noLabel = "No",
+  disabled,
+}: TriStateSelectProps) {
+  return (
+    <NativeSelect
+      id={id}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      options={[
+        { value: "", label: anyLabel },
+        { value: "true", label: yesLabel },
+        { value: "false", label: noLabel },
+      ]}
+    />
+  );
+}
+
+/**
+ * Any / Yes, for the filters the API takes as the literal string `Y`.
+ *
+ * `unassigned` and `open` are flags rather than booleans on this endpoint —
+ * sending `N` is not a documented value, so there is no third state to offer.
+ * Rendering them as tri-state would invent an option the API does not answer.
+ */
+export interface YFlagSelectProps {
+  value: string;
+  onChange: (next: string) => void;
+  id?: string;
+  anyLabel?: string;
+  yesLabel?: string;
+  disabled?: boolean;
+}
+
+export function YFlagSelect({
+  value,
+  onChange,
+  id,
+  anyLabel = "Any",
+  yesLabel = "Yes",
+  disabled,
+}: YFlagSelectProps) {
+  return (
+    <NativeSelect
+      id={id}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      options={[
+        { value: "", label: anyLabel },
+        { value: "Y", label: yesLabel },
+      ]}
+    />
   );
 }

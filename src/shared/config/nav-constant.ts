@@ -2,6 +2,7 @@ import {
   ClipboardCheck,
   FileText,
   Landmark,
+  LifeBuoy,
   LayoutDashboard,
   Package,
   Shield,
@@ -91,6 +92,13 @@ export const sidebarNav: NavItem[] = [
       "request_discounts",
       "request_corporate_setting_update",
     ],
+  },
+  {
+    title: "Support Tickets",
+    href: "/support-tickets",
+    icon: LifeBuoy,
+    // No permission gate: support is open to every signed-in user of the
+    // corporate, and the API scopes the list to their own tickets anyway.
   },
   {
     title:"Profile",

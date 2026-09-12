@@ -34,6 +34,11 @@ export interface MetaOptions {
   approvalStatusOptions: ComboboxOption[];
   /** Credit limit, discount, corporate info update, profile update. */
   approvalTypeOptions: ComboboxOption[];
+  /** Open, in progress, escalated, resolved, closed, reopened. */
+  ticketStatusOptions: ComboboxOption[];
+  ticketPriorityOptions: ComboboxOption[];
+  /** General, billing, delivery, pickup, tracking, rates, technical, complaint. */
+  ticketCategoryOptions: ComboboxOption[];
   isPending: boolean;
 }
 
@@ -50,6 +55,9 @@ export function useMetaOptions(): MetaOptions {
       urgencyOptions: toOptions(controls.consignment_urgency?.values),
       approvalStatusOptions: toOptions(controls.approval_statuses?.values),
       approvalTypeOptions: toOptions(controls.approval_request_types?.values),
+      ticketStatusOptions: toOptions(controls.support_ticket_statuses?.values),
+      ticketPriorityOptions: toOptions(controls.support_ticket_priorities?.values),
+      ticketCategoryOptions: toOptions(controls.support_ticket_categories?.values),
       isPending,
     };
   }, [data, isPending]);

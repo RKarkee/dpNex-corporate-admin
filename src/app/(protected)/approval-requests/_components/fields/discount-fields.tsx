@@ -9,7 +9,7 @@ import { NativeSelect } from "@/shared/components/ui/native-select";
 import type { ApprovalFormValues } from "../../schema";
 import { DISCOUNT_TYPES } from "../../types";
 import { consignmentFetcher } from "../lookup-fetchers";
-import { Field } from "./field";
+import { Field } from "@/shared/components/ui/form-field";
 
 const DISCOUNT_TYPE_OPTIONS = [
   { value: DISCOUNT_TYPES[0], label: "Fixed amount" },

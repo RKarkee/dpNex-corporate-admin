@@ -7,7 +7,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 
 import type { ApprovalFormValues } from "../../schema";
 import { infoFieldsFor, type ApprovalType } from "../../types";
-import { Field } from "./field";
+import { Field } from "@/shared/components/ui/form-field";
 
 /**
  * The two update types: whichever attributes are being proposed.

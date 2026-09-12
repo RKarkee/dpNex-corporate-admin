@@ -6,12 +6,15 @@ import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * Label, control, message — the rhythm every field on the request form follows.
+ * Label, control, message — the rhythm every form field in this app follows.
  *
- * Takes the control as a child rather than owning it, because half of these
- * fields are inputs, a third are native selects and one is an async combobox.
- * The id is handed down so the label and the error can point at whatever the
- * caller rendered.
+ * Takes the control as a render prop rather than owning it, because forms here
+ * mix inputs, textareas, native selects and async comboboxes; a shell that
+ * owned the control would have to know about all four. The id is handed down so
+ * the label and the error message can point at whatever the caller rendered.
+ *
+ * Distinct from `FilterField` next door: that one is a filter's label and hint,
+ * with no required marker and no error slot, because a filter cannot be invalid.
  */
 export interface FieldProps {
   label: string;

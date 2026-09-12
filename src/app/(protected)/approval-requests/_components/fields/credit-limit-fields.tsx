@@ -5,7 +5,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { Input } from "@/shared/components/ui/input";
 
 import type { ApprovalFormValues } from "../../schema";
-import { Field } from "./field";
+import { Field } from "@/shared/components/ui/form-field";
 
 /**
  * The whole of a credit-limit request: the limit being asked for.
