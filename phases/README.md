@@ -1,6 +1,6 @@
 # Build phases
 
-The Corporate Admin Portal is built in six phases. Each has its own file here with scope, files touched, verification steps, and what it deliberately leaves out.
+The Corporate Admin Portal is built in phases. Each has its own file here with scope, files touched, verification steps, and what it deliberately leaves out.
 
 **Working agreement:** one phase at a time. A phase ends when its checks pass and you have verified it yourself. The next phase does not start until you say so.
 
@@ -12,6 +12,7 @@ The Corporate Admin Portal is built in six phases. Each has its own file here wi
 | [4](phase-4-users-roles.md) | Corporate-scoped Users & Roles | ⬜ Not started |
 | [5](phase-5-dashboard-tracking-reports.md) | Dashboard, Tracking, Reports | ⬜ Not started |
 | [6](phase-6-production-hardening.md) | Mobile nav, code splitting, tests, CI | ⬜ Not started |
+| [7](phase-7-approval-requests.md) | Approval Requests — credit limit, discount, info updates | ✅ Code complete — awaiting your verification |
 
 ## The gate
 

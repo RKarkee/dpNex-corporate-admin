@@ -40,6 +40,9 @@ const PATHS = {
   currencies: "/currencies/get-lists",
   manufacturers: "/manufacturers/get-lists",
   forwarders: "/forwarders/get-lists",
+  corporates: "/corporates/get-lists",
+  customers: "/customers/get-lists",
+  consignments: "/consignments/get-lists",
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,6 +54,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * so the client's envelope-peeling leaves the whole body — read both keys off
  * whichever level they turn up at.
  */
+/**
+ * One row, however this endpoint keys its identifier.
+ *
+ * `/customers/get-lists` and `/corporates/get-lists` answer `{ id, label }`;
+ * every other list answers `{ value, label }`. Reading whichever is present
+ * keeps a single option contract for the combobox — casting the raw row
+ * instead would hand it `value: undefined`, and selecting an option would
+ * store nothing at all.
+ *
+ * A row with neither key is dropped rather than rendered, since an option that
+ * cannot be selected is worse than one that is not offered.
+ */
+function toOption(row: unknown): LookupOption | null {
+  if (!isRecord(row)) return null;
+
+  const raw = row.value ?? row.id;
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw !== "string" && typeof raw !== "number") return null;
+
+  return {
+    value: raw,
+    label: typeof row.label === "string" && row.label.trim() ? row.label : String(raw),
+  };
+}
+
 function readList(raw: unknown, page: number, perPage: number): LookupListResult {
   const body = isRecord(raw) ? raw : {};
   const nested = isRecord(body.data) ? body.data : undefined;
@@ -68,7 +96,7 @@ function readList(raw: unknown, page: number, perPage: number): LookupListResult
       : {};
 
   return {
-    data: rows as LookupOption[],
+    data: rows.map(toOption).filter((option): option is LookupOption => option !== null),
     meta: {
       page: typeof metaSource.page === "number" ? metaSource.page : page,
       per_page:
@@ -138,6 +166,26 @@ export function fetchForwarders(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.forwarders, page, perPage, query, "q");
 }
 
+/**
+ * Corporates, customers and consignments — the three lists the approval-request
+ * filters and the discount subject picker search over.
+ *
+ * All three are ids rather than codes, and all three answer `{ id | value,
+ * label }` with the usual `meta.has_more`, so `toOption` above is what makes
+ * them interchangeable with the code-keyed lists.
+ */
+export function fetchCorporates(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.corporates, page, perPage, query, "q");
+}
+
+export function fetchCustomers(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.customers, page, perPage, query, "q");
+}
+
+export function fetchConsignments(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.consignments, page, perPage, query, "q");
+}
+
 /* -------------------------------------------------------------------------- */
 /* Resolving one stored code to its label                                     */
 /* -------------------------------------------------------------------------- */
@@ -155,7 +203,10 @@ export type LookupKind =
   | "hsCode"
   | "currency"
   | "manufacturer"
-  | "forwarder";
+  | "forwarder"
+  | "corporate"
+  | "customer"
+  | "consignment";
 
 const FETCHERS: Record<
   LookupKind,
@@ -167,6 +218,9 @@ const FETCHERS: Record<
   currency: fetchCurrencies,
   manufacturer: fetchManufacturers,
   forwarder: fetchForwarders,
+  corporate: fetchCorporates,
+  customer: fetchCustomers,
+  consignment: fetchConsignments,
 };
 
 const RESOLVE_PAGE_SIZE = 20;

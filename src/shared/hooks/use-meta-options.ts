@@ -30,6 +30,10 @@ export interface MetaOptions {
   genderOptions: ComboboxOption[];
   productTypeOptions: ComboboxOption[];
   urgencyOptions: ComboboxOption[];
+  /** PENDING, APPROVED, REJECTED, CANCELLED — the approval-request lifecycle. */
+  approvalStatusOptions: ComboboxOption[];
+  /** Credit limit, discount, corporate info update, profile update. */
+  approvalTypeOptions: ComboboxOption[];
   isPending: boolean;
 }
 
@@ -44,6 +48,8 @@ export function useMetaOptions(): MetaOptions {
       genderOptions: toOptions(controls.item_gender_type?.values),
       productTypeOptions: toOptions(controls.consignment_product_type?.values),
       urgencyOptions: toOptions(controls.consignment_urgency?.values),
+      approvalStatusOptions: toOptions(controls.approval_statuses?.values),
+      approvalTypeOptions: toOptions(controls.approval_request_types?.values),
       isPending,
     };
   }, [data, isPending]);

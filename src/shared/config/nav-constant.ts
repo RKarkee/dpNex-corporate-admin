@@ -1,4 +1,5 @@
 import {
+  ClipboardCheck,
   FileText,
   Landmark,
   LayoutDashboard,
@@ -77,6 +78,20 @@ export const sidebarNav: NavItem[] = [
     //   "view_customer_billing_account",
     //   "crm_view_billing_account",
     // ],
+  },
+  {
+    title: "Approval Requests",
+    href: "/approval-requests",
+    icon: ClipboardCheck,
+    // Approvals are granted per request type — see
+    // `approval-requests/permissions.ts`. Holding any one of these is enough
+    // to have a list worth opening.
+    anyPermission: [
+      "request_credit_limit",
+      "request_discounts",
+      "request_corporate_setting_update",
+      "request_profile_update",
+    ],
   },
   {
     title:"Profile",
