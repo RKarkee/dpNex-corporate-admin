@@ -28,6 +28,12 @@ import { cn } from "@/shared/lib/utils";
  * label lives in a response this component may never have fetched (an edit
  * form opens with a stored code and no list), it is passed in as
  * `selectedLabel` rather than looked up here.
+ *
+ * `multiple` turns it into a checklist: the popover stays open, every row keeps
+ * its tick, and `onChange` fires as a TOGGLE — the caller adds or removes.
+ * Closing on each pick is right when there is one answer and wrong when there
+ * are several, since it makes choosing five things five round trips through a
+ * search box that has forgotten what you typed.
  */
 
 export interface AsyncComboboxOption {
@@ -41,7 +47,14 @@ export interface AsyncComboboxPage {
 }
 
 export interface AsyncComboboxProps {
+  /** The chosen value in single mode; ignored when `multiple` is set. */
   value: string;
+  /**
+   * Checklist mode: the popover stays open and `onChange` is a toggle. Pass the
+   * current set as `selectedValues` so every row can show its own state.
+   */
+  multiple?: boolean;
+  selectedValues?: string[];
   /** What the trigger shows. Falls back to `value`, then to the placeholder. */
   selectedLabel?: string;
   onChange: (option: AsyncComboboxOption) => void;
@@ -61,6 +74,8 @@ export interface AsyncComboboxProps {
 
 export function AsyncCombobox({
   value,
+  multiple = false,
+  selectedValues,
   selectedLabel,
   onChange,
   fetchPage,
@@ -80,6 +95,12 @@ export function AsyncCombobox({
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
+  /** Membership for the tick marks — the set in checklist mode, the one value otherwise. */
+  const selected = React.useMemo(
+    () => new Set(multiple ? (selectedValues ?? []) : value ? [value] : []),
+    [multiple, selectedValues, value],
+  );
 
   const listRef = React.useRef<HTMLDivElement>(null);
   /**
@@ -179,16 +200,23 @@ export function AsyncCombobox({
             "h-11 w-full justify-between bg-secondary px-3.5 font-normal",
             "border-transparent hover:bg-secondary/80",
             "aria-invalid:border-destructive/50 aria-invalid:ring-2 aria-invalid:ring-destructive/20",
-            !value && "text-muted-foreground",
+            !(multiple ? selected.size > 0 : value) && "text-muted-foreground",
             className,
           )}
         >
-          <span className="truncate">{selectedLabel || value || placeholder}</span>
+          <span className="truncate">
+            {selectedLabel || (multiple ? "" : value) || placeholder}
+          </span>
           <ChevronsUpDown aria-hidden className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        // Picking a row moves focus inside the list; without this, Radix pulls
+        // it back to the trigger on close and the page jumps.
+        onOpenAutoFocus={(event) => multiple && event.preventDefault()}
+      >
         {/* The endpoint already filtered; re-filtering here would hide rows it
             matched on a field we do not display. */}
         <Command shouldFilter={false}>
@@ -221,14 +249,16 @@ export function AsyncCombobox({
                   value={option.value}
                   onSelect={() => {
                     onChange(option);
-                    setOpen(false);
+                    // Checklist mode keeps the popover — and the search term —
+                    // where they are, so a second pick costs one click.
+                    if (!multiple) setOpen(false);
                   }}
                 >
                   <Check
                     aria-hidden
                     className={cn(
                       "mr-2 size-4",
-                      value === option.value ? "opacity-100" : "opacity-0",
+                      selected.has(option.value) ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <span className="truncate">{option.label}</span>

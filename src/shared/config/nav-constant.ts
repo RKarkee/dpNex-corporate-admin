@@ -3,6 +3,7 @@ import {
   FileText,
   Landmark,
   LifeBuoy,
+  Truck,
   LayoutDashboard,
   Package,
   Shield,
@@ -66,6 +67,13 @@ export const sidebarNav: NavItem[] = [
         anyPermission: ["approve_consignment", "view_any_consignment"],
       },
     ],
+  },
+  {
+    title: "Pickup Requests",
+    href: "/pickup-requests",
+    icon: Truck,
+    // No permission gate: booking a collection is open to every signed-in user
+    // of the corporate, and the API scopes the list to their own requests.
   },
   {
     title: "Billing Accounts",
