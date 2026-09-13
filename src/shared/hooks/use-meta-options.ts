@@ -39,6 +39,10 @@ export interface MetaOptions {
   ticketPriorityOptions: ComboboxOption[];
   /** General, billing, delivery, pickup, tracking, rates, technical, complaint. */
   ticketCategoryOptions: ComboboxOption[];
+  /** The thirteen-and-growing notification types, with the server's wording. */
+  notificationTypeOptions: ComboboxOption[];
+  /** EMAIL, BROADCAST, SMS, WHATSAPP, PUSH — whatever the API publishes. */
+  notificationChannelOptions: ComboboxOption[];
   isPending: boolean;
 }
 
@@ -58,6 +62,8 @@ export function useMetaOptions(): MetaOptions {
       ticketStatusOptions: toOptions(controls.support_ticket_statuses?.values),
       ticketPriorityOptions: toOptions(controls.support_ticket_priorities?.values),
       ticketCategoryOptions: toOptions(controls.support_ticket_categories?.values),
+      notificationTypeOptions: toOptions(controls.notification_types?.values),
+      notificationChannelOptions: toOptions(controls.notification_channels?.values),
       isPending,
     };
   }, [data, isPending]);

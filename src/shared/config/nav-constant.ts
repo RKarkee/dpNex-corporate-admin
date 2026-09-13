@@ -1,13 +1,15 @@
 import {
+  Bell,
   ClipboardCheck,
   FileText,
   Landmark,
   LifeBuoy,
-  Truck,
   LayoutDashboard,
   Package,
   Shield,
   ShieldCheck,
+  SlidersHorizontal,
+  Truck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -99,6 +101,22 @@ export const sidebarNav: NavItem[] = [
       "request_credit_limit",
       "request_discounts",
       "request_corporate_setting_update",
+    ],
+  },
+  {
+    title: "Notifications",
+    icon: Bell,
+    children: [
+      {
+        title: "Inbox",
+        href: "/notifications",
+        icon: Bell,
+      },
+      {
+        title: "Settings",
+        href: "/notifications/settings",
+        icon: SlidersHorizontal,
+      },
     ],
   },
   {

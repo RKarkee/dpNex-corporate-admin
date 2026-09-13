@@ -7,6 +7,7 @@ import { useSyncPermissions } from "@/shared/auth/use-sync-permissions";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
 
+import { NotificationProvider } from "../notifications/_provider/notification-provider";
 import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_COLLAPSED,
@@ -38,7 +39,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   useSyncPermissions();
 
   return (
-    <TooltipProvider delayDuration={200}>
+    /*
+     * The notification queries start here — inside `AuthGuard`, so nothing
+     * fetches before there is a session, and once, so the bell, the attention
+     * menu and the inbox cannot disagree about what is unread.
+     */
+    <NotificationProvider>
+      <TooltipProvider delayDuration={200}>
       <div className="min-h-svh bg-background">
         <Sidebar />
         <MobileSidebar />
@@ -65,7 +72,8 @@ function Shell({ children }: { children: React.ReactNode }) {
             <div className="mx-auto w-full min-w-0 max-w-[1400px]">{children}</div>
           </main>
         </div>
-      </div>
-    </TooltipProvider>
+        </div>
+      </TooltipProvider>
+    </NotificationProvider>
   );
 }

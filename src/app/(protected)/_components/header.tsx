@@ -7,6 +7,8 @@ import { Menu } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { routes, siteConfig } from "@/shared/config/site";
 
+import { AttentionMenu } from "../notifications/_components/attention-menu";
+import { NotificationBell } from "../notifications/_components/notification-bell";
 import { useSidebarStore } from "../_store/sidebar-store";
 import { UserMenu } from "./user-menu";
 
@@ -54,7 +56,14 @@ export function Header() {
         />
       </Link>
 
-      <div className="ml-auto flex items-center">
+      {/*
+        Two controls, two questions: the checklist is what is still OPEN, the
+        bell is what HAPPENED. They sit together because they are read together,
+        and they stay separate because one badge cannot mean both.
+      */}
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <AttentionMenu />
+        <NotificationBell />
         <UserMenu />
       </div>
     </header>
