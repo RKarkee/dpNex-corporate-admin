@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { RotateCcw } from "lucide-react";
 
 import { Badge } from "@/shared/components/ui/badge";

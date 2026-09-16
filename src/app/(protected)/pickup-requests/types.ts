@@ -145,11 +145,9 @@ export interface PickupRequest {
 /** `"SMALL_VAN"` → `"Small van"`. */
 export function humanize(value: string): string {
   const words = value.toLowerCase().split("_").filter(Boolean);
-  if (words.length === 0) return "";
-  return [
-    words[0].charAt(0).toUpperCase() + words[0].slice(1),
-    ...words.slice(1),
-  ].join(" ");
+  const [firstWord, ...restWords] = words;
+  if (!firstWord) return "";
+  return [firstWord.charAt(0).toUpperCase() + firstWord.slice(1), ...restWords].join(" ");
 }
 
 export function vehicleLabel(value?: string | null): string {

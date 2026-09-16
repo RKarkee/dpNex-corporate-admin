@@ -77,10 +77,9 @@ export function humanize(value: string): string {
     .split(" ")
     .filter(Boolean);
 
-  if (words.length === 0) return "";
-  return [words[0].charAt(0).toUpperCase() + words[0].slice(1), ...words.slice(1)].join(
-    " ",
-  );
+  const [firstWord, ...restWords] = words;
+  if (!firstWord) return "";
+  return [firstWord.charAt(0).toUpperCase() + firstWord.slice(1), ...restWords].join(" ");
 }
 
 /** Unread is unread, whichever way the row spells it. */
