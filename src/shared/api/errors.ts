@@ -211,8 +211,9 @@ export function summarizeMessages(messages: string[]): string | undefined {
  * 3. **Our own copy for the status**, when the body offers nothing.
  *
  * 5xx bodies carry stack traces and SQL, so nothing from them is ever shown —
- * the status copy is used regardless of what they contain. 401 is likewise
- * fixed, because "Unauthenticated." is not an instruction.
+ * the status copy is used regardless of what they contain. 401 can still use
+ * the upstream message on public calls such as `/login`; protected-session
+ * redirects remain handled by the private client interceptor.
  */
 export function preferredMessage(
   status: number,
@@ -223,7 +224,7 @@ export function preferredMessage(
       ? payload.message.trim()
       : undefined;
 
-  const trusted = status < 500 && status !== 401;
+  const trusted = status < 500;
 
   if (trusted) {
     const specific = summarizeMessages(extractErrorMessages(payload));

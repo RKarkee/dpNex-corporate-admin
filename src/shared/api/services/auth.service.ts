@@ -38,9 +38,9 @@ export const LOGIN_ERRORS = {
   disabled:
     "You are disabled. Please contact Admin / Support to enable the account.",
   notCorporate:
-    "This portal is for corporate users only. Please use the portal for your account type.",
+    "You are not authorized to sign in. Only Corporate users can access this portal.",
   noCorporate:
-    "This account is not linked to a corporate account. Contact your administrator.",
+    "You are not authorized to sign in as a corporate user. This account is not linked to a corporate account.",
   malformed: "Sign in failed — the service returned an unexpected response.",
 } as const;
 
