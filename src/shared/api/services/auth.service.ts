@@ -49,7 +49,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Normalises `data.corporates` into a typed list.
+ * Normalises the login response's corporate list into a typed list.
  *
  * `corp_code` is the value `X-Corporate-Code` wants — a short code like
  * `ABCDEF`. Deliberately not read: the user's `slug`, which looks like a code
@@ -58,7 +58,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readCorporates(data: unknown): Corporate[] {
   if (!isRecord(data)) return [];
 
-  const source = Array.isArray(data.corporates)
+  const sources = Array.isArray(data.corporates)
     ? data.corporates
     : isRecord(data.user) && Array.isArray(data.user.corporates)
       ? data.user.corporates
@@ -66,7 +66,7 @@ function readCorporates(data: unknown): Corporate[] {
 
   const result: Corporate[] = [];
 
-  for (const entry of source) {
+  for (const entry of sources) {
     if (!isRecord(entry)) continue;
 
     const code = ["corp_code", "corporate_code", "code"]

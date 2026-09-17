@@ -165,7 +165,7 @@ export interface User {
 export interface LoginResponseData {
   token: string;
   user: User;
-  corporates?: Corporate[];
+  corporates: Corporate[];
 }
 
 /** The normalised login response. Hydrates `useAuthStore`. */

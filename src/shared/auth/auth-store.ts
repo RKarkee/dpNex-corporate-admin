@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 // From `session-config`, not `session` — the latter imports `next/headers`,
 // which cannot be pulled into a client bundle.
 import {
+  CORPORATE_COOKIE,
   SESSION_MAX_AGE_REMEMBER_SECONDS,
   SESSION_MAX_AGE_SECONDS,
 } from "./session-config";
@@ -225,7 +226,20 @@ export function getAuthToken(): string | null {
 }
 
 export function getActiveCorporateCode(): string | null {
-  return useAuthStore.getState().activeCorporateCode;
+  const stateCorporateCode = useAuthStore.getState().activeCorporateCode;
+  if (stateCorporateCode) return stateCorporateCode;
+
+  if (typeof document === "undefined") return null;
+
+  const cookie = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${CORPORATE_COOKIE}=`));
+
+  if (!cookie) return null;
+
+  const rawValue = cookie.slice(CORPORATE_COOKIE.length + 1).trim();
+  return rawValue ? decodeURIComponent(rawValue) : null;
 }
 
 export function getStoredUser(): User | null {
