@@ -43,27 +43,119 @@ export interface AttentionRow {
   isSubset?: boolean;
 }
 
-/**
- * The screens a count can be acted on.
- *
- * Keyed by `group.metric`, and deliberately partial: a metric with no entry
- * still renders, with its number, just without a link. That is the honest
- * answer for a count whose screen this portal does not have yet — and it means
- * a new metric from the API appears immediately rather than waiting for a
- * release here.
- */
-const ATTENTION_ROUTES: Record<string, string> = {
-  "support_tickets.awaiting_first_reply":
-    "/support-tickets?awaiting_first_response=true",
-  "support_tickets.open": "/support-tickets?open=Y",
-  "support_tickets.unassigned": "/support-tickets?unassigned=Y",
-  "approval_requests.pending": "/approval-requests?status=PENDING",
-  "pickup_requests.pending": "/pickup-requests",
-  "consignment_requests.pending": "/consignments/request",
+const ATTENTION_ENDPOINT_PATHS: Record<string, string> = {
+  supporttickets: "/support-tickets",
+  pickuprequests: "/pickup-requests",
+  consignmentrequests: "/consignments/request",
+  "approval-requests": "/approval-requests",
 };
 
 /** Metrics that count a slice of another metric in the same group. */
 const SUBSET_METRICS = new Set(["unseen", "new"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pathLabel(parts: string[]): string {
+  return parts.map((part) => humanize(part)).join(" ");
+}
+
+function appendParam(search: URLSearchParams, key: string, value: unknown): void {
+  if (value === undefined || value === null || value === "") return;
+
+  if (Array.isArray(value)) {
+    for (const item of value) appendParam(search, key, item);
+    return;
+  }
+
+  search.append(key, String(value));
+}
+
+function endpointPath(endpoint: string | null | undefined): string | undefined {
+  const key = String(endpoint ?? "").trim();
+  if (!key) return undefined;
+  return ATTENTION_ENDPOINT_PATHS[key];
+}
+
+function attentionHref(filter: unknown): string | undefined {
+  if (!isRecord(filter)) return undefined;
+
+  const path = endpointPath(filter.endpoint as string | null | undefined);
+  if (!path) return undefined;
+
+  const search = new URLSearchParams();
+  const params = filter.params;
+  if (isRecord(params)) {
+    for (const [key, value] of Object.entries(params)) {
+      appendParam(search, key, value);
+    }
+  }
+
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+function leafFilterFor(
+  filtersNode: unknown,
+  metricParts: string[],
+  key: string,
+): unknown {
+  if (!isRecord(filtersNode)) return undefined;
+
+  const directKey = metricParts.length > 0 ? `${metricParts.join(".")}.${key}` : key;
+  if (directKey in filtersNode) return filtersNode[directKey];
+
+  if (key in filtersNode) return filtersNode[key];
+
+  return undefined;
+}
+
+function nestedFilterFor(filtersNode: unknown, key: string): unknown {
+  if (!isRecord(filtersNode)) return undefined;
+  if (key in filtersNode) return filtersNode[key];
+  return undefined;
+}
+
+function collectAttentionRows(
+  node: unknown,
+  group: string,
+  metricParts: string[] = [],
+  filtersNode: unknown,
+): AttentionRow[] {
+  if (!isRecord(node)) return [];
+
+  const rows: AttentionRow[] = [];
+
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "filters") continue;
+
+    const nextParts = [...metricParts, key];
+    if (typeof value === "number") {
+      rows.push({
+        key: `${group}.${nextParts.join(".")}`,
+        label: `${humanize(group)} ${pathLabel(nextParts).toLowerCase()}`,
+        count: value,
+        href: attentionHref(leafFilterFor(filtersNode, metricParts, key)),
+        isSubset: SUBSET_METRICS.has(key),
+      });
+      continue;
+    }
+
+    if (isRecord(value)) {
+      rows.push(
+        ...collectAttentionRows(
+          value,
+          group,
+          nextParts,
+          nestedFilterFor(filtersNode, key),
+        ),
+      );
+    }
+  }
+
+  return rows;
+}
 
 /**
  * The summary object, flattened into rows the menu can render.
@@ -82,23 +174,7 @@ export function attentionRows(summary?: AttentionSummary | null): AttentionRow[]
 
   for (const [group, metrics] of Object.entries(summary)) {
     if (group === "notifications") continue;
-    if (!metrics || typeof metrics !== "object") continue;
-
-    for (const [metric, value] of Object.entries(metrics)) {
-      const count = Number(value);
-      if (!Number.isFinite(count)) continue;
-
-      const key = `${group}.${metric}`;
-      rows.push({
-        key,
-        // "Support tickets awaiting first reply" — group then metric, both
-        // humanised, so a name nobody has mapped still reads as English.
-        label: `${humanize(group)} ${humanize(metric).toLowerCase()}`,
-        count,
-        href: ATTENTION_ROUTES[key],
-        isSubset: SUBSET_METRICS.has(metric),
-      });
-    }
+    rows.push(...collectAttentionRows(metrics, group, [], isRecord(metrics) ? metrics.filters : undefined));
   }
 
   return rows.sort((a, b) => b.count - a.count);

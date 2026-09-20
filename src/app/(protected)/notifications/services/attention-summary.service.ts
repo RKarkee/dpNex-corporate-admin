@@ -28,25 +28,8 @@ export async function fetchAttentionSummary(
   if (!isRecord(raw)) return {};
 
   const data = isRecord(raw.data) ? raw.data : raw;
-  const summary = isRecord(data.attentionsummary)
-    ? data.attentionsummary
-    : isRecord(data.attention_summary)
-      ? data.attention_summary
-      : data;
+  if (isRecord(data.attentionsummary)) return data.attentionsummary as AttentionSummary;
+  if (isRecord(data.attention_summary)) return data.attention_summary as AttentionSummary;
 
-  const out: AttentionSummary = {};
-
-  for (const [group, metrics] of Object.entries(summary)) {
-    if (!isRecord(metrics)) continue;
-
-    const numbers: Record<string, number> = {};
-    for (const [metric, value] of Object.entries(metrics)) {
-      const count = Number(value);
-      if (Number.isFinite(count)) numbers[metric] = count;
-    }
-
-    if (Object.keys(numbers).length > 0) out[group] = numbers;
-  }
-
-  return out;
+  return data as AttentionSummary;
 }

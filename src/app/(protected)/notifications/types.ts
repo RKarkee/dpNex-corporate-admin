@@ -60,13 +60,12 @@ export interface DeviceToken {
 /* -------------------------------------------------------------------------- */
 
 /**
- * `{ assignments: { pending: 12, unseen: 10 }, support_tickets: { … } }`.
+ * Raw attention-summary payload from the API.
  *
- * Deliberately untyped beyond this: the API adds groups and metrics as modules
- * arrive, and a fixed interface would silently hide every one it has not been
- * taught. The menu renders whatever comes back.
+ * The API keeps adding groups, nested metrics and filter metadata, so the UI
+ * treats this as a dynamic tree rather than a fixed contract.
  */
-export type AttentionSummary = Record<string, Record<string, number>>;
+export type AttentionSummary = Record<string, unknown>;
 
 /** `"DRIVING_LICENSE"` → `"Driving license"`, `"awaiting_first_reply"` → `"Awaiting first reply"`. */
 export function humanize(value: string): string {
