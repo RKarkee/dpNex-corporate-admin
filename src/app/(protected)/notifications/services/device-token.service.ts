@@ -14,6 +14,13 @@ import type { DeviceToken } from "../types";
 
 const BASE = "/corporate/device-tokens";
 
+export type DeviceTokenPlatform = "IOS" | "ANDROID" | "WEB";
+
+export interface RegisterDeviceTokenInput {
+  token: string;
+  platform: DeviceTokenPlatform;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -37,6 +44,18 @@ function readTokens(raw: unknown): DeviceToken[] {
 export async function listDeviceTokens(signal?: AbortSignal): Promise<DeviceToken[]> {
   const raw = await privateApiClient.get<unknown>(BASE, { silent: true, signal });
   return readTokens(raw);
+}
+
+/**
+ * Registers the current device for push notifications.
+ *
+ * The backend may reassign an existing token from a previous owner, so this is
+ * an upsert-style write rather than a uniqueness error.
+ */
+export function registerDeviceToken(
+  input: RegisterDeviceTokenInput,
+): Promise<MutationResult<unknown>> {
+  return privateApiClient.mutate("POST", BASE, input, { silent: true });
 }
 
 /**

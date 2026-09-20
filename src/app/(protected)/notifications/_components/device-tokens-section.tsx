@@ -7,14 +7,18 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { ConfirmDialog } from "@/shared/components/ui/confirm-dialog";
+import { Input } from "@/shared/components/ui/input";
+import { NativeSelect } from "@/shared/components/ui/native-select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { formatDateTime } from "@/shared/lib/dates";
 
 import {
   useDeleteDeviceToken,
   useDeviceTokens,
+  useRegisterDeviceToken,
 } from "../_hooks/use-device-tokens";
 import { humanize, type DeviceToken } from "../types";
+import type { DeviceTokenPlatform } from "../services/device-token.service";
 
 /**
  * The devices registered to receive push.
@@ -30,6 +34,82 @@ function maskToken(token: string): string {
   const value = token.trim();
   if (value.length <= 16) return value;
   return `${value.slice(0, 8)}…${value.slice(-6)}`;
+}
+
+const platformOptions: { value: DeviceTokenPlatform; label: string }[] = [
+  { value: "ANDROID", label: "Android" },
+  { value: "IOS", label: "iOS" },
+  { value: "WEB", label: "Web" },
+];
+
+function RegisterDeviceTokenForm() {
+  const register = useRegisterDeviceToken();
+  const [token, setToken] = React.useState("");
+  const [platform, setPlatform] = React.useState<DeviceTokenPlatform>("ANDROID");
+
+  return (
+    <form
+      className="space-y-4 rounded-xl border border-border bg-card p-5"
+      onSubmit={async (event) => {
+        event.preventDefault();
+
+        const value = token.trim();
+        if (!value) return;
+
+        await register.mutateAsync({ token: value, platform });
+        setToken("");
+        setPlatform("ANDROID");
+      }}
+    >
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">Register device</h3>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Add the push token for this install so it can receive notifications.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px]">
+        <div className="space-y-2">
+          <label htmlFor="device-token" className="text-sm font-medium text-foreground">
+            Push token
+          </label>
+          <Input
+            id="device-token"
+            name="device-token"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            maxLength={255}
+            autoComplete="off"
+            placeholder="fcm-abc123"
+            required
+            disabled={register.isPending}
+          />
+          <p className="text-xs text-muted-foreground">
+            The token issued by FCM or APNs for this install.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="device-platform" className="text-sm font-medium text-foreground">
+            Platform
+          </label>
+          <NativeSelect
+            id="device-platform"
+            value={platform}
+            options={platformOptions}
+            onChange={(event) => setPlatform(event.target.value as DeviceTokenPlatform)}
+            disabled={register.isPending}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={register.isPending || token.trim().length === 0}>
+          {register.isPending ? "Registering…" : "Register device"}
+        </Button>
+      </div>
+    </form>
+  );
 }
 
 export function DeviceTokensSection() {
@@ -69,6 +149,8 @@ export function DeviceTokensSection() {
 
   return (
     <>
+      <RegisterDeviceTokenForm />
+
       <Card>
         <CardContent className="p-0">
           {tokens.length === 0 ? (

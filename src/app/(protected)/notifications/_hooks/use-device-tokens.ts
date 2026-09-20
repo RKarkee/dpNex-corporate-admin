@@ -7,6 +7,8 @@ import { toast } from "@/shared/components/toast";
 import {
   deleteDeviceToken,
   listDeviceTokens,
+  registerDeviceToken,
+  type RegisterDeviceTokenInput,
 } from "../services/device-token.service";
 import { notificationKeys } from "./query-keys";
 
@@ -34,6 +36,24 @@ export function useDeleteDeviceToken() {
 
     onSuccess: async (result) => {
       toast.success(result.message?.trim() || "Device removed");
+      await queryClient.invalidateQueries({ queryKey: notificationKeys.devices() });
+    },
+
+    onError: (error) => toast.error(error),
+  });
+}
+
+/**
+ * Registers the current device token and then refreshes the device list.
+ */
+export function useRegisterDeviceToken() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: RegisterDeviceTokenInput) => registerDeviceToken(input),
+
+    onSuccess: async (result) => {
+      toast.success(result.message?.trim() || "Device registered");
       await queryClient.invalidateQueries({ queryKey: notificationKeys.devices() });
     },
 
