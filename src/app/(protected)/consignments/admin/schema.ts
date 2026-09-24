@@ -35,7 +35,8 @@ const optionalNumber = z.preprocess(
   z.coerce.number().optional(),
 );
 
-const senderSchema = z.object({
+/** Exported for the Update Sender dialog, which validates one party on its own. */
+export const senderSchema = z.object({
   sender_first_name: z.string().min(1, "First name is required"),
   sender_last_name: z.string().min(1, "Last name is required"),
   sender_company: z.string().optional(),
@@ -57,7 +58,7 @@ const senderSchema = z.object({
   sender_address_type: z.enum(PARTY_ADDRESS_TYPES),
 });
 
-const receiverSchema = z.object({
+export const receiverSchema = z.object({
   receiver_first_name: z.string().min(1, "First name is required"),
   receiver_last_name: z.string().min(1, "Last name is required"),
   receiver_company: z.string().optional(),

@@ -1,4 +1,5 @@
 import {
+  fetchAssignables,
   fetchCurrencies,
   fetchForwarders,
   fetchHsCodes,
@@ -47,3 +48,12 @@ export const manufacturerFetcher = async (page: number, query: string) =>
 
 export const forwarderFetcher = async (page: number, query: string) =>
   toPage(await fetchForwarders(page, PER_PAGE, query || undefined));
+
+/**
+ * Users a consignment request's workflow task can be (re)assigned to — the
+ * assignables list scoped to `CONSIGNMENT_REQUEST`.
+ */
+export const assignableFetcher = async (page: number, query: string) =>
+  toPage(
+    await fetchAssignables(page, PER_PAGE, query || undefined, "CONSIGNMENT_REQUEST"),
+  );

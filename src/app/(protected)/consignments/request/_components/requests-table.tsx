@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Package, Pencil, Trash2 } from "lucide-react";
+import { Eye, Package, Pencil, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -43,7 +43,7 @@ const STICKY_ACTIONS =
 const COLUMNS = 7;
 
 /** The customer name, from whichever of three shapes the API used. */
-function customerName(item: ConsignmentRequestListItem): string {
+export function customerName(item: ConsignmentRequestListItem): string {
   if (typeof item.customer === "string" && item.customer.trim()) {
     return item.customer.trim();
   }
@@ -53,16 +53,24 @@ function customerName(item: ConsignmentRequestListItem): string {
   return item.customer_name?.trim() || "—";
 }
 
-function place(city?: string | null, country?: string | null): string {
+export function place(city?: string | null, country?: string | null): string {
   const parts = [city?.trim(), country?.trim()].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "—";
+}
+
+/** Whether a row currently has anywhere to move to. */
+export function hasNextStatuses(request: ConsignmentRequestListItem): boolean {
+  return Array.isArray(request.next_statuses) && request.next_statuses.length > 0;
 }
 
 export interface RequestsTableProps {
   requests: ConsignmentRequestListItem[];
   onDelete: (request: ConsignmentRequestListItem) => void;
+  /** Opens Update Status for a row — offered only where `next_statuses` is non-empty. */
+  onUpdateStatus: (request: ConsignmentRequestListItem) => void;
   canUpdate: boolean;
   canDelete: boolean;
+  canUpdateStatus: boolean;
   /** The row whose delete is in flight, if any. */
   deletingId?: number | null;
 }
@@ -70,14 +78,15 @@ export interface RequestsTableProps {
 export function RequestsTable({
   requests,
   onDelete,
+  onUpdateStatus,
   canUpdate,
   canDelete,
+  canUpdateStatus,
   deletingId,
 }: RequestsTableProps) {
   // The rows carry codes (`URGENT`); `/meta` carries the words to show for
   // them. One cached query serves every row.
   const { urgencyOptions } = useMetaOptions();
-
   return (
     <div className="overflow-hidden">
       <Table className={TABLE_DENSITY}>
@@ -186,6 +195,20 @@ export function RequestsTable({
                         >
                           <Pencil className="size-4" />
                         </Link>
+                      </Button>
+                    ) : null}
+
+                    {/* Only while the workflow allows a transition — an empty or
+                        missing next_statuses means there is nowhere to go. */}
+                    {canUpdateStatus && hasNextStatuses(request) && request.can_update_status ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => onUpdateStatus(request)}
+                        aria-label={`Update status of ${request.request_tracking_id}`}
+                        className="text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700"
+                      >
+                        <RefreshCw className="size-4" />
                       </Button>
                     ) : null}
 

@@ -1,5 +1,7 @@
 "use client";
 
+import type * as React from "react";
+
 import { useStateOptions } from "@/shared/hooks/use-location-options";
 import type { LocationOption } from "@/shared/hooks/use-location-options";
 
@@ -21,11 +23,14 @@ export function PartySection({
   prefix,
   party,
   countryOptions,
+  action,
 }: {
   title: string;
   prefix: "sender" | "receiver";
   party: Record<string, string | undefined>;
   countryOptions: LocationOption[];
+  /** The section's edit control, when this record accepts one. */
+  action?: React.ReactNode;
 }) {
   const field = (key: string) => party[`${prefix}_${key}`];
 
@@ -41,7 +46,7 @@ export function PartySection({
     .join(", ");
 
   return (
-    <Section title={title} className="lg:grid-cols-3">
+    <Section title={title} action={action} className="lg:grid-cols-3">
       <Field
         label="Name"
         value={`${field("first_name") ?? ""} ${field("last_name") ?? ""}`.trim()}

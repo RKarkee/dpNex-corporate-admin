@@ -23,6 +23,7 @@ import {
   ConsignmentsTable,
   ConsignmentsTableSkeleton,
 } from "./consignments-table";
+import { UpdateStatusDialog } from "./update-status-dialog";
 
 /**
  * The consignment list: search, table, pagination, and the states it can be in.
@@ -37,13 +38,15 @@ export function ConsignmentsView() {
   const [search, setSearch] = React.useState("");
   const [pendingDelete, setPendingDelete] =
     React.useState<ConsignmentListItem | null>(null);
+  const [statusTarget, setStatusTarget] =
+    React.useState<ConsignmentListItem | null>(null);
 
   // One request per pause in typing, not one per keystroke.
   const debouncedSearch = useDebouncedValue(search);
 
   // `canCreate` is unused while the create path is commented out.
-  const { canUpdate, canDelete } = useConsignmentAdminPermissions();
-
+  const { canUpdate, canDelete, canUpdateStatus } =
+    useConsignmentAdminPermissions();
   const { data, isPending, isError, error, isFetching, refetch } =
     useConsignments(page, debouncedSearch);
   const deleteConsignment = useDeleteConsignment();
@@ -148,13 +151,15 @@ export function ConsignmentsView() {
             <ConsignmentsTable
               consignments={items}
               onDelete={setPendingDelete}
+              onUpdateStatus={setStatusTarget}
               canUpdate={canUpdate}
               canDelete={canDelete}
-              deletingId={
-                deleteConsignment.isPending
-                  ? (deleteConsignment.variables ?? null)
-                  : null
-              }
+              canUpdateStatus={canUpdateStatus}
+              // deletingId={
+              //   deleteConsignment.isPending
+              //     ? (deleteConsignment.variables ?? null)
+              //     : null
+              // }
             />
           </div>
 
@@ -190,6 +195,15 @@ export function ConsignmentsView() {
         confirmLabel="Delete consignment"
         onConfirm={handleConfirmDelete}
       />
+
+      {statusTarget ? (
+        <UpdateStatusDialog
+          consignmentId={statusTarget.id}
+          statuses={statusTarget.next_statuses ?? []}
+          open
+          onOpenChange={(open) => !open && setStatusTarget(null)}
+        />
+      ) : null}
     </>
   );
 }

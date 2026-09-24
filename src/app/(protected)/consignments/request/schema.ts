@@ -53,10 +53,11 @@ const partySchema = z.object({
   address_type: z.enum(PARTY_ADDRESS_TYPES),
 });
 
-const senderSchema = partySchema;
+/** Exported for the Update Sender dialog, which validates one party on its own. */
+export const senderSchema = partySchema;
 
 /** The receiver also carries coordinates, derived from the chosen city. */
-const receiverSchema = partySchema.extend({
+export const receiverSchema = partySchema.extend({
   latitude: optionalNumber,
   longitude: optionalNumber,
 });

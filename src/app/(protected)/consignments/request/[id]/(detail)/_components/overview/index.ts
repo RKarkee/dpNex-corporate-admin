@@ -6,7 +6,9 @@
  * pattern for the rest of the module: a barrel across feature boundaries would
  * pull unrelated components into every bundle that touched one of them.
  */
+export { AssignmentHistorySection } from "./assignment-history-section";
 export { CustomerSection } from "./customer-section";
+export { EventsSection } from "./events-section";
 export { PartySection } from "./party-section";
 export { PickupSection } from "./pickup-section";
 export { RoutingSection } from "./routing-section";

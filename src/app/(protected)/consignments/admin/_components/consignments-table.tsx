@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Package,} from "lucide-react";
+import { Eye, Package, RefreshCw , Pencil, Trash2} from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -43,12 +43,12 @@ const STICKY_ACTIONS =
 const COLUMNS = 7;
 
 /** The tracking reference, under whichever key this response used. */
-function trackingId(item: ConsignmentListItem): string {
+export function trackingId(item: ConsignmentListItem): string {
   return item.request_tracking_id || item.tracking_number || `#${item.id}`;
 }
 
 /** The customer name, from whichever of three shapes the API used. */
-function customerName(item: ConsignmentListItem): string {
+export function customerName(item: ConsignmentListItem): string {
   if (typeof item.customer === "string" && item.customer.trim()) {
     return item.customer.trim();
   }
@@ -58,16 +58,24 @@ function customerName(item: ConsignmentListItem): string {
   return item.customer_name?.trim() || "—";
 }
 
-function place(city?: string | null, country?: string | null): string {
+export function place(city?: string | null, country?: string | null): string {
   const parts = [city?.trim(), country?.trim()].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "—";
+}
+
+/** Whether a row currently has anywhere to move to. */
+export function hasNextStatuses(consignment: ConsignmentListItem): boolean {
+  return Array.isArray(consignment.next_statuses) && consignment.next_statuses.length > 0;
 }
 
 export interface ConsignmentsTableProps {
   consignments: ConsignmentListItem[];
   onDelete: (consignment: ConsignmentListItem) => void;
+  /** Opens Update Status for a row — offered only where `next_statuses` is non-empty. */
+  onUpdateStatus: (consignment: ConsignmentListItem) => void;
   canUpdate: boolean;
   canDelete: boolean;
+  canUpdateStatus: boolean;
   /** The row whose delete is in flight, if any. */
   deletingId?: number | null;
 }
@@ -76,9 +84,11 @@ export function ConsignmentsTable({
   consignments,
   // Edit and delete are commented out in the action cell below; the props stay
   // on the interface so restoring them is uncommenting, not re-plumbing.
-  onDelete: _onDelete,
-  canUpdate: _canUpdate,
-  canDelete: _canDelete,
+  onDelete,
+  canUpdate,
+  canDelete,
+  onUpdateStatus,
+  canUpdateStatus,
   deletingId,
 }: ConsignmentsTableProps) {
   // The rows carry codes (`URGENT`); `/meta` carries the words to show for
@@ -185,7 +195,21 @@ export function ConsignmentsTable({
                       </Link>
                     </Button>
 
-                    {/* {canUpdate ? (
+                    {/* Only while the workflow allows a transition — an empty or
+                        missing next_statuses means there is nowhere to go. */}
+                    {canUpdateStatus && hasNextStatuses(consignment) && consignment.can_update_status ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => onUpdateStatus(consignment)}
+                        aria-label={`Update status of ${trackingId(consignment)}`}
+                        className="text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700"
+                      >
+                        <RefreshCw className="size-4" />
+                      </Button>
+                    ) : null}
+
+                    {canUpdate ? (
                       <Button variant="ghost" size="icon-sm" asChild>
                         <Link
                           href={`/consignments/admin/${consignment.id}/edit`}
@@ -194,9 +218,9 @@ export function ConsignmentsTable({
                           <Pencil className="size-4" />
                         </Link>
                       </Button>
-                    ) : null} */}
+                    ) : null}
 
-                    {/* {canDelete ? (
+                    {canDelete ? (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -207,7 +231,7 @@ export function ConsignmentsTable({
                       >
                         <Trash2 className="size-4" />
                       </Button>
-                    ) : null} */}
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>

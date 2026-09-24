@@ -41,6 +41,18 @@ export const ADMIN_ENDPOINTS = {
     `${BASE}/${id}/boxes/${boxId}/items`,
   item: (id: number | string, boxId: number | string, itemId: number | string) =>
     `${BASE}/${id}/boxes/${boxId}/items/${itemId}`,
+
+  deleted: `${BASE}/deleted`,
+  restore: (id: number | string) => `${BASE}/${id}/restore`,
+
+  // Workflow actions — see consignment-actions.service.ts.
+  updateStatus: (id: number | string) => `${BASE}/${id}/updatestatus`,
+  updateSender: (id: number | string) => `${BASE}/${id}/updateSender`,
+  updateReceiver: (id: number | string) => `${BASE}/${id}/updateReceiver`,
+  events: (id: number | string) => `${BASE}/${id}/events`,
+  assign: (id: number | string) => `${BASE}/${id}/assign`,
+  reassign: (id: number | string) => `${BASE}/${id}/reassign`,
+  cancel: (id: number | string) => `${BASE}/${id}/cancel`,
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -292,4 +304,39 @@ export function deleteConsignment(id: number): Promise<MutationResult> {
     undefined,
     { silent: true },
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Deleted consignments                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `GET /corporate/consignments/deleted` — the soft-deleted consignments, one
+ * page at a time. Same envelope as the main list, so the same reader applies.
+ */
+export async function listDeletedConsignments({
+  page = 1,
+  perPage = 15,
+  signal,
+}: Omit<ConsignmentListParams, "search"> = {}): Promise<ConsignmentListResult> {
+  const response = await privateApiClient.request<unknown>(
+    "GET",
+    ADMIN_ENDPOINTS.deleted,
+    undefined,
+    {
+      params: { page, per_page: perPage },
+      // The tab renders its own error card; the client's toast would double up.
+      silent: true,
+      signal,
+    },
+  );
+
+  return { items: readConsignments(response.raw), meta: response.meta };
+}
+
+/** `POST /corporate/consignments/{id}/restore` — undoes a delete. */
+export function restoreConsignment(id: number): Promise<MutationResult> {
+  return privateApiClient.mutate("POST", ADMIN_ENDPOINTS.restore(id), undefined, {
+    silent: true,
+  });
 }

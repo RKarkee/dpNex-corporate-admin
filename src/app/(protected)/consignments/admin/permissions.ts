@@ -23,6 +23,9 @@ export const CONSIGNMENT_ADMIN_PERMISSIONS: {
   create: string[];
   update: string[];
   delete: string[];
+  updateStatus: string[];
+  addCharges: string[];
+  updateCharges: string[];
 } = {
   // `approve_consignment` is the grant the sidebar already uses for this
   // section, so anyone who can reach the nav entry can open the list.
@@ -30,4 +33,12 @@ export const CONSIGNMENT_ADMIN_PERMISSIONS: {
   create: ["create_consignment", "add_consignment"],
   update: ["update_consignment", "edit_consignment", "approve_consignment"],
   delete: ["delete_consignment", "destroy_consignment"],
+  // Moving a consignment's status directly.
+  // The status-specific grants, plus the plain update grants: the Locations
+  // tab — which also moves the status — is gated on those, and the corporate
+  // role may carry only them. One grant is enough; the API decides.
+  updateStatus: ["update_consignment_status", "update_tracking_status", "update_consignment", "edit_consignment", "approve_consignment"],
+  addCharges: ["add_consignment_charges"],
+  // Also gates deleting a charge — no separate delete grant is published.
+  updateCharges: ["update_consignment_charges"],
 };

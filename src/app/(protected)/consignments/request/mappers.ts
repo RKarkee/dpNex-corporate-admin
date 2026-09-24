@@ -71,7 +71,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /* Form → payload                                                             */
 /* -------------------------------------------------------------------------- */
 
-function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInfo {
+/** Also used on its own by the Update Sender dialog. */
+export function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInfo {
   return {
     sender_first_name: sender.first_name,
     sender_last_name: sender.last_name,
@@ -92,7 +93,8 @@ function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInfo {
   };
 }
 
-function toReceiverInfo(
+/** Also used on its own by the Update Receiver dialog. */
+export function toReceiverInfo(
   receiver: ConsignmentFormValues["receiver"],
 ): ReceiverInfo {
   return {

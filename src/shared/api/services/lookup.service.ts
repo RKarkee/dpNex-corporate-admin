@@ -117,6 +117,8 @@ async function fetchLookup(
   query: string | undefined,
   queryParam: "q" | "query",
   signal?: AbortSignal,
+  /** Fixed filters some lists take on every page — e.g. assignables' `module`. */
+  extraParams?: Record<string, string>,
 ): Promise<LookupListResult> {
   const response = await privateApiClient.request<unknown>(
     "GET",
@@ -127,6 +129,7 @@ async function fetchLookup(
         page,
         per_page: perPage,
         ...(query ? { [queryParam]: query } : {}),
+        ...extraParams,
       },
       // The combobox shows "no results" in place; a toast per keystroke would
       // be unusable.
@@ -189,13 +192,30 @@ export function fetchConsignments(page: number, perPage: number, query?: string)
 }
 
 /**
- * Staff who can own a support ticket.
+ * Staff who can own a support ticket, or a consignment's workflow task.
  *
  * A table of users rather than a `/meta` enum, which is why it is here: who a
  * caller may assign to depends on who they are, so the server decides the list.
+ *
+ * `module` scopes the list (`CONSIGNMENT`, `CONSIGNMENT_REQUEST`). Omitted,
+ * nothing is sent — support tickets publish no module key, and guessing one
+ * would quietly empty their list.
  */
-export function fetchAssignables(page: number, perPage: number, query?: string) {
-  return fetchLookup(PATHS.assignables, page, perPage, query, "q");
+export function fetchAssignables(
+  page: number,
+  perPage: number,
+  query?: string,
+  module?: string,
+) {
+  return fetchLookup(
+    PATHS.assignables,
+    page,
+    perPage,
+    query,
+    "q",
+    undefined,
+    module ? { module } : undefined,
+  );
 }
 
 /**

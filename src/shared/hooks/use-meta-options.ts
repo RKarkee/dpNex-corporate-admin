@@ -24,6 +24,30 @@ function toOptions(values: MetaOption[] | undefined): ComboboxOption[] {
   }));
 }
 
+/**
+ * The workflow vocabularies — event codes and task codes.
+ *
+ * Their rows carry the code under its own name (`event_code`, `task_code`)
+ * next to `key`, plus an `enabled` flag. The named code is what the API takes,
+ * so it wins over `key`; a disabled entry is not offered at all.
+ */
+function toCodeOptions(
+  values: MetaOption[] | undefined,
+  codeKey: "event_code" | "task_code",
+): ComboboxOption[] {
+  return (values ?? []).flatMap((value) => {
+    const row = value as MetaOption & Record<string, unknown>;
+    if (row.enabled === false) return [];
+
+    const named = row[codeKey];
+    const code =
+      typeof named === "string" && named.trim() ? named : String(row.key ?? "");
+    if (!code) return [];
+
+    return [{ value: code, label: row.label || code }];
+  });
+}
+
 export interface MetaOptions {
   /** PCS, KG, … — used by boxes and by every item inside them. */
   quantityCodeOptions: ComboboxOption[];
@@ -43,6 +67,14 @@ export interface MetaOptions {
   notificationTypeOptions: ComboboxOption[];
   /** EMAIL, BROADCAST, SMS, WHATSAPP, PUSH — whatever the API publishes. */
   notificationChannelOptions: ComboboxOption[];
+  /** Events a consignment request can log — value is the `event_code`. */
+  requestEventCodeOptions: ComboboxOption[];
+  /** Events a consignment can log — value is the `event_code`. */
+  consignmentEventCodeOptions: ComboboxOption[];
+  /** Workflow tasks a consignment request can be assigned — value is the `task_code`. */
+  requestTaskCodeOptions: ComboboxOption[];
+  /** Workflow tasks a consignment can be assigned — value is the `task_code`. */
+  consignmentTaskCodeOptions: ComboboxOption[];
   isPending: boolean;
 }
 
@@ -64,6 +96,22 @@ export function useMetaOptions(): MetaOptions {
       ticketCategoryOptions: toOptions(controls.support_ticket_categories?.values),
       notificationTypeOptions: toOptions(controls.notification_types?.values),
       notificationChannelOptions: toOptions(controls.notification_channels?.values),
+      requestEventCodeOptions: toCodeOptions(
+        controls.consignment_request_event_codes?.values,
+        "event_code",
+      ),
+      consignmentEventCodeOptions: toCodeOptions(
+        controls.consignment_event_codes?.values,
+        "event_code",
+      ),
+      requestTaskCodeOptions: toCodeOptions(
+        controls.consignment_request_task_codes?.values,
+        "task_code",
+      ),
+      consignmentTaskCodeOptions: toCodeOptions(
+        controls.consignment_task_codes?.values,
+        "task_code",
+      ),
       isPending,
     };
   }, [data, isPending]);

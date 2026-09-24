@@ -19,6 +19,10 @@ export interface ConsignmentAdminPermissions {
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
+  /** The user's side only — pair with the record's own `can_*` flag. */
+  canUpdateStatus: boolean;
+  canAddCharges: boolean;
+  canUpdateCharges: boolean;
 }
 
 export function useConsignmentAdminPermissions(): ConsignmentAdminPermissions {
@@ -31,5 +35,8 @@ export function useConsignmentAdminPermissions(): ConsignmentAdminPermissions {
     // consignment, so editing one is editing it.
     canUpdate: canAny(user, CONSIGNMENT_ADMIN_PERMISSIONS.update),
     canDelete: canAny(user, CONSIGNMENT_ADMIN_PERMISSIONS.delete),
+    canUpdateStatus: canAny(user, CONSIGNMENT_ADMIN_PERMISSIONS.updateStatus),
+    canAddCharges: canAny(user, CONSIGNMENT_ADMIN_PERMISSIONS.addCharges),
+    canUpdateCharges: canAny(user, CONSIGNMENT_ADMIN_PERMISSIONS.updateCharges),
   };
 }

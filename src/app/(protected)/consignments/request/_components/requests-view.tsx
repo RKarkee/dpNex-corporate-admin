@@ -18,6 +18,7 @@ import { useConsignmentRequests } from "../_hooks/use-consignment-requests";
 import { useDeleteConsignmentRequest } from "../_hooks/use-save-consignment-request";
 import type { ConsignmentRequestListItem } from "../types";
 import { RequestsTable, RequestsTableSkeleton } from "./requests-table";
+import { UpdateStatusDialog } from "./update-status-dialog";
 
 /**
  * The consignment request list: search, table, pagination, and the states it
@@ -37,11 +38,14 @@ export function RequestsView() {
   const [search, setSearch] = React.useState("");
   const [pendingDelete, setPendingDelete] =
     React.useState<ConsignmentRequestListItem | null>(null);
+  const [statusTarget, setStatusTarget] =
+    React.useState<ConsignmentRequestListItem | null>(null);
 
   // One request per pause in typing, not one per keystroke.
   const debouncedSearch = useDebouncedValue(search);
 
-  const { canCreate, canUpdate, canDelete } = useConsignmentPermissions();
+  const { canCreate, canUpdate, canDelete, canUpdateStatus } =
+    useConsignmentPermissions();
 
   const { data, isPending, isError, error, isFetching, refetch } =
     useConsignmentRequests(page, debouncedSearch);
@@ -68,6 +72,7 @@ export function RequestsView() {
   }
 
   const items = data?.items ?? [];
+  console.log(items, "items");
 
   // Declared before the early returns so hook order stays stable across states.
   const handleConfirmDelete = React.useCallback(async () => {
@@ -156,11 +161,13 @@ export function RequestsView() {
             <RequestsTable
               requests={items}
               onDelete={setPendingDelete}
+              onUpdateStatus={setStatusTarget}
               canUpdate={canUpdate}
               canDelete={canDelete}
-              deletingId={
-                deleteRequest.isPending ? (deleteRequest.variables ?? null) : null
-              }
+              canUpdateStatus={canUpdateStatus}
+              // deletingId={
+              //   deleteRequest.isPending ? (deleteRequest.variables ?? null) : null
+              // }
             />
           </div>
 
@@ -195,6 +202,15 @@ export function RequestsView() {
         confirmLabel="Delete request"
         onConfirm={handleConfirmDelete}
       />
+
+      {statusTarget ? (
+        <UpdateStatusDialog
+          requestId={statusTarget.id}
+          statuses={statusTarget.next_statuses ?? []}
+          open
+          onOpenChange={(open) => !open && setStatusTarget(null)}
+        />
+      ) : null}
     </>
   );
 }

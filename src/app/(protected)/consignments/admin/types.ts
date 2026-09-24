@@ -242,6 +242,8 @@ export interface ConsignmentListItem {
   no_of_boxes?: number;
   customer?: string | { name?: string } | null;
   customer_name?: string | null;
+  /** Where the row may move next — drives the list's Update Status action. */
+  next_statuses?: NextStatusOption[];
   sender?: {
     sender_company?: string | null;
     sender_city?: string | null;
@@ -345,9 +347,27 @@ export interface ConsignmentDetail {
   nature_of_goods?: string | null;
   shipper_reference_code?: string | null;
   status: string;
+  status_label?: string | null;
+  /** Where this consignment may legally move next, already labelled by the API. */
+  next_statuses?: NextStatusOption[];
   send_updates: string;
   have_hscode: string;
   qr_data?: string | null;
+
+  /** Who holds the current workflow task — `null` means nobody yet (Assign, not Reassign). */
+  current_assignee_id?: number | null;
+  current_assignment?: AssignmentHistoryEntry | null;
+  assignment_histories?: AssignmentHistoryEntry[];
+
+  /*
+   * Record-level gates: whether *this* consignment, in its current state,
+   * accepts the action. Paired with the user's own permission wherever both exist.
+   */
+  can_update_sender?: boolean;
+  can_update_receiver?: boolean;
+  can_update_tracking_status?: boolean;
+  can_add_charges?: boolean;
+  can_update_charges?: boolean;
   [key: string]: unknown;
 }
 
@@ -388,4 +408,103 @@ export interface ItemWritePayload {
   item_rate?: number;
   item_total_amount?: number;
   item_currency?: string;
+}
+
+/** One entry of `next_statuses` — the API supplies both code and copy. */
+export interface NextStatusOption {
+  value: string;
+  label: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Workflow actions                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** A user as the workflow endpoints embed one — `name` is often null. */
+export interface WorkflowPerson {
+  id?: number;
+  name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  [key: string]: unknown;
+}
+
+/** One entry of `assignment_histories` (and the shape of `current_assignment`). */
+export interface AssignmentHistoryEntry {
+  id: number;
+  workflow_task_code?: string | null;
+  workflow_task_name?: string | null;
+  assigned_to?: WorkflowPerson | null;
+  assigned_by?: WorkflowPerson | null;
+  assigned_at?: string | null;
+  assigned_role?: string | null;
+  seen_at?: string | null;
+  completed_at?: string | null;
+  remarks?: string | null;
+  /** Human-readable, e.g. "2 weeks 4 days 11 hours" — null until that stage happens. */
+  ack_duration?: string | null;
+  response_duration?: string | null;
+  active_work_duration?: string | null;
+  ownership_duration?: string | null;
+  [key: string]: unknown;
+}
+
+/** One entry of `events` — the activity log. */
+export interface ConsignmentEventEntry {
+  id: number;
+  task_code?: string | null;
+  event?: string | null;
+  event_code?: string | null;
+  performed_by?: WorkflowPerson | null;
+  performed_at?: string | null;
+  remarks?: string | null;
+  [key: string]: unknown;
+}
+
+/** `POST …/updatestatus`. Place fields only with `have_new_location: "Y"`. */
+export interface UpdateStatusPayload {
+  status: string;
+  have_new_location: YesNo;
+  comments?: string;
+  location?: string;
+  country?: string;
+  /** The readable state name, not the picker's iso2 code. */
+  state?: string;
+  city?: string;
+  location_date?: string;
+  arrived_at?: string;
+  moved_at?: string;
+  /** Only for `FORWARDED_WITH`, and then always with `new_tracking_no`. */
+  forwarder_code?: string;
+  new_tracking_no?: string;
+  // Documented but deliberately not collected yet — uncomment together with
+  // the matching fields in update-status-dialog.tsx.
+  // type?: "CONSIGNMENT" | "REQUEST";
+  // tracking_no?: string;
+}
+
+/** `POST …/events`. */
+export interface CreateEventPayload {
+  event_code: string;
+}
+
+/** `POST …/assign` — for a request nobody holds yet. */
+export interface AssignPayload {
+  task_code: string;
+  assigned_to: number;
+}
+
+/** `POST …/reassign` — for a request someone already holds. */
+export interface ReassignPayload {
+  assigned_to: number;
+  reason: string;
+}
+
+/**
+ * `POST …/cancel`. The reason is recorded against the record and shown in its
+ * history — 3 to 500 characters.
+ */
+export interface CancelPayload {
+  reason: string;
 }

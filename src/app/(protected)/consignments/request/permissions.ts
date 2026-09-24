@@ -29,11 +29,22 @@ export const CONSIGNMENT_PERMISSIONS: {
   create: string[];
   update: string[];
   delete: string[];
+  updateStatus: string[];
+  addCharges: string[];
+  updateCharges: string[];
 } = {
   view: ["view_consignment", "view_any_consignment"],
   create: ["create_consignment", "add_consignment"],
   update: ["update_consignment", "edit_consignment"],
   delete: ["delete_consignment", "destroy_consignment"],
+  // Moving a request's status directly, outside the Locations tab.
+  // The status-specific grants, plus the plain update grants: the Locations
+  // tab — which also moves the status — is gated on those, and the corporate
+  // role may carry only them. One grant is enough; the API decides.
+  updateStatus: ["update_consignment_status", "update_tracking_status", "update_consignment", "edit_consignment"],
+  addCharges: ["add_consignment_charges"],
+  // Also gates deleting a charge — no separate delete grant is published.
+  updateCharges: ["update_consignment_charges"],
 };
 
 /** Opening the list needs either — reading it, or being able to add to it. */

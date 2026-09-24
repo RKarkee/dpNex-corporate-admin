@@ -6,6 +6,7 @@
  *
  *   ["consignment-requests"]                          → the whole feature
  *   ["consignment-requests", "list", { page, … }]     → one page of the table
+ *   ["consignment-requests", "deleted", { page, … }]  → one page of the Deleted tab
  *   ["consignment-requests", id]                      → everything about one request
  *   ["consignment-requests", id, "detail"]            → the record
  *   ["consignment-requests", id, "boxes"]             → its boxes
@@ -26,6 +27,10 @@ export const consignmentRequestKeys = {
   lists: () => [...consignmentRequestKeys.all, "list"] as const,
   list: (params: { page: number; perPage: number; search: string }) =>
     [...consignmentRequestKeys.lists(), params] as const,
+
+  /** The landing page's Deleted tab — under `all`, so a restore refreshes both lists. */
+  deleted: (params: { page: number; perPage: number }) =>
+    [...consignmentRequestKeys.all, "deleted", params] as const,
 
   /** Everything under one request — the widest thing any write here touches. */
   request: (id: number | string) => [...consignmentRequestKeys.all, id] as const,

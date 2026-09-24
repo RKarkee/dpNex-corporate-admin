@@ -38,21 +38,27 @@ export function Field({
   );
 }
 
-/** A titled card holding a grid of `Field`s. */
+/**
+ * A titled card holding a grid of `Field`s. `action` sits at the right of the
+ * title row — an edit button for the section, never more than a control or two.
+ */
 export function Section({
   title,
+  action,
   children,
   className,
 }: {
   title: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <Card className="p-6">
-      <h2 className="mb-4 border-b border-border/70 pb-3 text-base font-semibold text-foreground">
-        {title}
-      </h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-3">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        {action}
+      </div>
       <div
         className={cn(
           "grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4",

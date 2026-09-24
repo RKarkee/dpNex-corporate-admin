@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Coins,
   FileText,
   MapPin,
   ScrollText,
@@ -35,6 +36,7 @@ export const DETAIL_TABS: DetailTab[] = [
   { segment: "boxes", label: "Boxes", icon: Boxes },
   { segment: "documents", label: "Documents", icon: FileText },
   { segment: "locations", label: "Locations", icon: MapPin },
+  { segment: "charges", label: "Charges", icon: Coins },
 ];
 
 /** `/consignments/request/10` or `/consignments/request/10/documents`. */

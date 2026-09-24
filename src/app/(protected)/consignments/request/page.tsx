@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -7,7 +8,8 @@ import { PageHeader } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 
 import { CONSIGNMENT_LIST_PERMISSIONS } from "./permissions";
-import { RequestsView } from "./_components/requests-view";
+import { RequestsLanding } from "./_components/requests-landing";
+import { RequestsTableSkeleton } from "./_components/requests-table";
 
 export const metadata: Metadata = {
   title: "Consignment Requests",
@@ -28,7 +30,11 @@ export default function ConsignmentRequestPage() {
           </Button>
         }
       />
-      <RequestsView />
+      {/* `useSearchParams` (the open tab) needs a Suspense boundary above it or
+          the build fails on prerender; the fallback shows only before hydration. */}
+      <Suspense fallback={<RequestsTableSkeleton />}>
+        <RequestsLanding />
+      </Suspense>
     </RequirePermission>
   );
 }

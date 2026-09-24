@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 // import Link from "next/link";
 // import { Plus } from "lucide-react";
@@ -6,7 +7,8 @@ import { RequirePermission } from "@/shared/auth/require-permission";
 import { PageHeader } from "@/shared/components/page-header";
 // import { Button } from "@/shared/components/ui/button";
 
-import { ConsignmentsView } from "./_components/consignments-view";
+import { ConsignmentsLanding } from "./_components/consignments-landing";
+import { ConsignmentsTableSkeleton } from "./_components/consignments-table";
 import { CONSIGNMENT_ADMIN_PERMISSIONS } from "./permissions";
 
 export const metadata: Metadata = {
@@ -28,7 +30,11 @@ export default function ConsignmentAdminPage() {
         //   </Button>
         // }
       />
-      <ConsignmentsView />
+      {/* `useSearchParams` (the open tab) needs a Suspense boundary above it or
+          the build fails on prerender; the fallback shows only before hydration. */}
+      <Suspense fallback={<ConsignmentsTableSkeleton />}>
+        <ConsignmentsLanding />
+      </Suspense>
     </RequirePermission>
   );
 }

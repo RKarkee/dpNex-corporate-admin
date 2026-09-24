@@ -71,7 +71,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /* -------------------------------------------------------------------------- */
 
 /** Near-passthrough: only the optional-empty-string trimming differs. */
-function toSenderPayload(
+/** Also used on its own by the Update Sender dialog. */
+export function toSenderPayload(
   sender: ConsignmentAdminFormValues["sender"],
 ): ConsignmentSender {
   return {
@@ -94,7 +95,8 @@ function toSenderPayload(
   };
 }
 
-function toReceiverPayload(
+/** Also used on its own by the Update Receiver dialog. */
+export function toReceiverPayload(
   receiver: ConsignmentAdminFormValues["receiver"],
 ): ConsignmentReceiver {
   return {

@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Coins,
   FileText,
   MapPin,
   Receipt,
@@ -40,6 +41,7 @@ export const DETAIL_TABS: DetailTab[] = [
   { segment: "boxes", label: "Boxes", icon: Boxes },
   { segment: "documents", label: "Documents", icon: FileText },
   { segment: "locations", label: "Locations", icon: MapPin },
+  { segment: "charges", label: "Charges", icon: Coins },
   { segment: "billing", label: "Billing", icon: Receipt },
 ];
 
