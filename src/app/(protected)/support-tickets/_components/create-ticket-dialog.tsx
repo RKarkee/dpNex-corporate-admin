@@ -80,11 +80,15 @@ export function CreateTicketDialog({
   /*
    * A fresh form each time the dialog opens — otherwise closing a half-written
    * ticket and opening a new one presents the abandoned draft.
+   *
+   * Adjusted during render rather than in an effect, so the stale draft is
+   * never painted and then corrected.
    */
-  React.useEffect(() => {
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) form.reset(emptyTicketForm());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {

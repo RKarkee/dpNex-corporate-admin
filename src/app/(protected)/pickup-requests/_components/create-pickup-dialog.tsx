@@ -76,16 +76,23 @@ export function CreatePickupDialog({
   const { errors } = form.formState;
   const remarks = useWatch({ control: form.control, name: "remarks" });
 
-  /* A fresh form each time it opens — otherwise an abandoned booking, and the
-     errors it collected, greet the next one. */
-  React.useEffect(() => {
+  /*
+   * A fresh form each time the dialog opens.
+   *
+   * Adjusted during render rather than in an effect: React re-runs this
+   * component immediately with the reset values and never commits the stale
+   * pair, so nothing flashes — and an effect would paint the abandoned draft
+   * first, then correct it. It is also the pattern the filter bars use.
+   */
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       form.reset(emptyPickupForm());
       setPicked([]);
       setRefusal(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   const addConsignment = (option: PickedConsignment) => {
     // Picking the same one twice is a slip, not an instruction to send it twice.

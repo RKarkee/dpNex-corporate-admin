@@ -103,16 +103,18 @@ export function CreateRequestDialog({
   const type = useWatch({ control: form.control, name: "type" });
 
   /*
-   * A fresh form each time the dialog opens.
+   * A fresh form each time the dialog opens — otherwise closing a half-filled
+   * request and opening a new one presents the abandoned draft, including
+   * validation errors against fields the new type does not have.
    *
-   * Without this, closing a half-filled request and opening a new one would
-   * present the abandoned draft — including validation errors against fields
-   * the new type does not have.
+   * Adjusted during render rather than in an effect, so the stale draft is
+   * never painted and then corrected.
    */
-  React.useEffect(() => {
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) form.reset(emptyApprovalForm(initialType));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   const changeType = (next: string) => {
     const chosen = allowedTypes.includes(next as ApprovalType)
