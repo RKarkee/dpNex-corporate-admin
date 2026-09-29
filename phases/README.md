@@ -16,6 +16,7 @@ The Corporate Admin Portal is built in phases. Each has its own file here with s
 | [8](phase-8-support-tickets.md) | Support Tickets — 20-filter queue, raise, close | ✅ Code complete — awaiting your verification |
 | [9](phase-9-pickup-requests.md) | Pickup Requests — book a van for ready consignments | ✅ Code complete — awaiting your verification |
 | [10](phase-10-notifications.md) | Notifications — bell, attention menu, inbox, channels & devices | ✅ Code complete — awaiting your verification |
+| [11](phase-11-labels.md) | Consignment request labels — generate, regenerate, history, download | ✅ Code complete — awaiting your verification |
 
 ## The gate
 

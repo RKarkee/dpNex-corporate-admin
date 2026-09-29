@@ -11,6 +11,7 @@
  *   ["consignment-requests", id, "detail"]            → the record
  *   ["consignment-requests", id, "boxes"]             → its boxes
  *   ["consignment-requests", id, "boxes", boxId, "items"]
+ *   ["consignment-requests", id, "labels", "options" | "history"]
  *
  * The id sits *before* the sub-resource, not after. With `["…", "detail", id]`
  * and `["…", id, "boxes"]` the two branches never overlap, so adding a box
@@ -53,4 +54,15 @@ export const consignmentRequestKeys = {
 
   item: (id: number | string, boxId: number | string, itemId: number | string) =>
     [...consignmentRequestKeys.items(id, boxId), itemId] as const,
+
+  /**
+   * Under `request(id)`, so a generate/regenerate that refreshes the request
+   * also refreshes these — and the detail's `is_label_generated` with them.
+   */
+  labels: (id: number | string) =>
+    [...consignmentRequestKeys.request(id), "labels"] as const,
+  labelOptions: (id: number | string) =>
+    [...consignmentRequestKeys.labels(id), "options"] as const,
+  labelHistory: (id: number | string) =>
+    [...consignmentRequestKeys.labels(id), "history"] as const,
 } as const;

@@ -387,6 +387,15 @@ export interface ConsignmentRequestDetail {
   can_update_tracking_status?: boolean;
   can_add_charges?: boolean;
   can_update_charges?: boolean;
+
+  /*
+   * Labels. `is_label_generated` picks the action bar's buttons (Generate vs
+   * Download + Regenerate); `current_label` and `label_options` are the
+   * detail's own copies, used until the label queries answer.
+   */
+  is_label_generated?: boolean;
+  current_label?: LabelHistoryItem | null;
+  label_options?: LabelOption[];
   [key: string]: unknown;
 }
 
@@ -520,4 +529,65 @@ export interface ReassignPayload {
  */
 export interface CancelPayload {
   reason: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Labels                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One label the request can produce, from `GET …/label/options`.
+ *
+ * A request has not been handed to a carrier yet, so in practice this is only
+ * ever our own `INTERNAL` label; `INTEGRATOR_API` is typed because the endpoint
+ * is shared with consignments, which can offer carrier labels.
+ */
+export interface LabelOption {
+  type: "INTERNAL" | "INTEGRATOR_API" | (string & {});
+  label: string;
+  button_label?: string | null;
+  label_api_id?: number | null;
+  via_code?: string | null;
+  integrator_code?: string | null;
+  /** True when the option needs `additional_fields` filled first — no form for those yet. */
+  requires_additional_data?: boolean;
+  additional_fields?: unknown[];
+}
+
+/** One version from `GET …/label/history` (and the shape of `current_label`). */
+export interface LabelHistoryItem {
+  id: number;
+  version: number;
+  is_current: boolean;
+  /** False when the attempt failed — no file exists for it. */
+  generated: boolean;
+  status: string;
+  is_cancellable?: boolean;
+  provider?: string | null;
+  forwarder_code?: string | null;
+  shipment_type?: string | null;
+  via_code?: string | null;
+  integrator_code?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  /** Bytes. */
+  file_size?: number | null;
+  attempts?: number | null;
+  failure_reason?: string | null;
+  generated_at?: string | null;
+  /** Absolute URL — not fetchable without the bearer token; use `/labels/{id}/download`. */
+  download_url?: string | null;
+  created_at?: string | null;
+}
+
+/**
+ * Body for `POST …/label/regenerate`. Everything printed on the label is read
+ * from the record server-side; this only says which label and that a fresh
+ * version is wanted even though a usable one exists.
+ */
+export interface RegenerateLabelPayload {
+  label_type?: "INTERNAL" | "INTEGRATOR_API";
+  label_api_id?: number;
+  additional_data?: Record<string, unknown>;
+  regenerate?: boolean;
 }

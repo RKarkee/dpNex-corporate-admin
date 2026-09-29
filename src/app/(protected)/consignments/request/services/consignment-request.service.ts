@@ -51,6 +51,14 @@ export const ENDPOINTS = {
   assign: (id: number | string) => `${BASE}/${id}/assign`,
   reassign: (id: number | string) => `${BASE}/${id}/reassign`,
   cancel: (id: number | string) => `${BASE}/${id}/cancel`,
+
+  // Labels — see labels.service.ts.
+  label: (id: number | string) => `${BASE}/${id}/label`,
+  labelOptions: (id: number | string) => `${BASE}/${id}/label/options`,
+  labelRegenerate: (id: number | string) => `${BASE}/${id}/label/regenerate`,
+  labelHistory: (id: number | string) => `${BASE}/${id}/label/history`,
+  /** Not under the request — a label version is addressed by its own id. */
+  labelDownload: (labelId: number | string) => `/labels/${labelId}/download`,
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -9,6 +9,8 @@
 export { AssignmentHistorySection } from "./assignment-history-section";
 export { CustomerSection } from "./customer-section";
 export { EventsSection } from "./events-section";
+export { LabelHistorySection } from "./label-history-section";
+export { LabelOptionsSection } from "./label-options-section";
 export { PartySection } from "./party-section";
 export { PickupSection } from "./pickup-section";
 export { RoutingSection } from "./routing-section";

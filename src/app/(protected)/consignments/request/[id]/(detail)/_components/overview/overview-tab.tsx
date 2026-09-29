@@ -17,6 +17,8 @@ import {
   AssignmentHistorySection,
   CustomerSection,
   EventsSection,
+  LabelHistorySection,
+  LabelOptionsSection,
   PartySection,
   PickupSection,
   RoutingSection,
@@ -70,6 +72,10 @@ export function OverviewTab({ id }: { id: number }) {
       {/* The workflow actions — room for more buttons as they arrive. */}
       <DetailActions request={request} />
 
+      {/* Labels near the top: produce / download here, every version just below. */}
+      <LabelOptionsSection request={request} />
+    
+
       <StatusSection request={request} />
       <CustomerSection request={request} />
       <RoutingSection request={request} boxCount={boxes.length} />
@@ -95,6 +101,7 @@ export function OverviewTab({ id }: { id: number }) {
 
       <PickupSection request={request} />
       <ValueSection request={request} />
+      <LabelHistorySection request={request} />
 
       {/* Read-only workflow logs, shown only when the response carries them. */}
       {Array.isArray(request.assignment_histories) ? (

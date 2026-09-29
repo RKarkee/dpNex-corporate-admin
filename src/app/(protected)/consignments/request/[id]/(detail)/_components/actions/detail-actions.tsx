@@ -25,6 +25,7 @@ type OpenDialog = "status" | "event" | "assign" | "reassign" | "cancel" | null;
  *   dedicated permission yet, so they are offered to anyone on this page and
  *   the API has the final say.
  * - Assign while nobody holds the request, Reassign once someone does.
+ * - Labels have their own card under this bar (`LabelOptionsSection`).
  */
 export function DetailActions({ request }: { request: ConsignmentRequestDetail }) {
   const [open, setOpen] = React.useState<OpenDialog>(null);
