@@ -1,11 +1,18 @@
 import {
+  BarChart3,
   Bell,
   ClipboardCheck,
+  Contact,
+  FileBarChart2,
   FileText,
   Landmark,
+  Layers,
   LifeBuoy,
   LayoutDashboard,
+  ListChecks,
   Package,
+  PiggyBank,
+  Receipt,
   Shield,
   ShieldCheck,
   SlidersHorizontal,
@@ -76,6 +83,58 @@ export const sidebarNav: NavItem[] = [
     icon: Truck,
     // No permission gate: booking a collection is open to every signed-in user
     // of the corporate, and the API scopes the list to their own requests.
+  },
+  {
+    title: "Reports",
+    icon: BarChart3,
+    children: [
+      {
+        title: "Consignment",
+        href: "/reports/consignments",
+        icon: FileBarChart2,
+        // Same view grants as the Consignment Admin section — this report
+        // surfaces the same organisation-wide consignment figures.
+        anyPermission: ["view_any_consignment", "approve_consignment", "view_consignment"],
+      },
+      {
+        title: "Customer",
+        href: "/reports/customers",
+        icon: Contact,
+        // No permission gate: no `view_customer`-style grant is published
+        // for this resource yet — see `reports/customers/permissions.ts`.
+      },
+      {
+        title: "Requests",
+        href: "/reports/requests",
+        icon: ListChecks,
+        // Same view grants as the Consignment Request / Admin sections —
+        // this report covers the same pending/approved/rejected figures.
+        anyPermission: ["view_any_consignment", "approve_consignment", "view_consignment", "create_consignment"],
+      },
+      {
+        title: "Billing",
+        href: "/reports/billing",
+        icon: Receipt,
+        // No permission gate: no confirmed `view_billing`-style grant is
+        // published for this resource yet — see
+        // `reports/billing/permissions.ts` (same gap as Billing Accounts).
+      },
+      {
+        title: "Outstanding",
+        href: "/reports/outstanding",
+        icon: PiggyBank,
+        // No permission gate: same unconfirmed billing-grant gap as the
+        // Billing report — see `reports/outstanding/permissions.ts`.
+      },
+      {
+        title: "Summary",
+        href: "/reports/summary",
+        icon: Layers,
+        // Same view grants as the Consignment report — this endpoint mixes
+        // consignment and billing figures with no resource-specific grant.
+        anyPermission: ["view_any_consignment", "approve_consignment", "view_consignment"],
+      },
+    ],
   },
   {
     title: "Billing Accounts",
