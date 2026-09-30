@@ -8,12 +8,15 @@ import { Loader2, Send, UserRound, UsersRound } from "lucide-react";
 import { isApiError } from "@/shared/api/errors";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
+import { RemoteAddressBanner } from "@/shared/components/ui/remote-address-banner";
 
 import {
   consignmentFormSchema,
   type ConsignmentFormInput,
   type ConsignmentFormValues,
 } from "../schema";
+import { useCheckRemoteAddress } from "../_hooks/use-check-remote-address";
+import type { ShipmentRouting } from "../types";
 import { AddressFields } from "./address-fields";
 import { BoxesFields } from "./boxes-fields";
 import { FieldGroup } from "./field-shell";
@@ -48,6 +51,12 @@ export interface ConsignmentFormProps {
   /** Shown while submitting, in place of `submitLabel`. */
   submittingLabel: string;
   cancelHref: string;
+  /**
+   * Via, integrator and package type this consignment is priced against —
+   * from the chosen quote on create, from the stored record on edit. Not form
+   * fields, but the remote-address and weight checks need them.
+   */
+  routing: ShipmentRouting;
   /** The failed mutation — anything that is not a 422 is summarised above the buttons. */
   error?: unknown;
 }
@@ -59,6 +68,7 @@ export function ConsignmentForm({
   submitLabel,
   submittingLabel,
   cancelHref,
+  routing,
   error,
 }: ConsignmentFormProps) {
   const {
@@ -78,6 +88,18 @@ export function ConsignmentForm({
   const senderState = watch("sender.state");
   const receiverCountry = watch("receiver.country");
   const receiverState = watch("receiver.state");
+  const receiverCity = watch("receiver.city");
+  const receiverZip = watch("receiver.zip");
+
+  // Live remote-address check for the receiver, shown under its address.
+  const remoteAddressCheck = useCheckRemoteAddress({
+    country: receiverCountry,
+    state: receiverState,
+    city: receiverCity,
+    zip: receiverZip,
+    viaCode: routing.viaCode,
+    integratorCode: routing.integratorCode,
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -140,6 +162,11 @@ export function ConsignmentForm({
             onStateChange={() => setValue("receiver.city", "")}
             showGeo
           />
+          <RemoteAddressBanner
+            status={remoteAddressCheck.status}
+            result={remoteAddressCheck.result}
+            errorMessage={remoteAddressCheck.errorMessage}
+          />
         </FieldGroup>
       </Card>
 
@@ -148,6 +175,13 @@ export function ConsignmentForm({
         register={register}
         setValue={setValue}
         errors={errors}
+        routing={routing}
+        receiver={{
+          country: receiverCountry,
+          state: receiverState,
+          city: receiverCity,
+          zip: receiverZip,
+        }}
       />
 
       {/* A 422 is already spelled out under each field; anything else needs

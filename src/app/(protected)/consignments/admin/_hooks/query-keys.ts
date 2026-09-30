@@ -54,4 +54,12 @@ export const consignmentAdminKeys = {
 
   item: (id: number | string, boxId: number | string, itemId: number | string) =>
     [...consignmentAdminKeys.items(id, boxId), itemId] as const,
+
+  /** Receiver remote-address check, keyed on everything it sends. */
+  remoteAddressCheck: (params: Record<string, string>) =>
+    [...consignmentAdminKeys.all, "remote-address-check", params] as const,
+
+  /** Per-box weight check — keyed on the box and its dimensions only. */
+  weightDimensionCheck: (params: Record<string, string>) =>
+    [...consignmentAdminKeys.all, "weight-dimension-check", params] as const,
 } as const;

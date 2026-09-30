@@ -1,6 +1,7 @@
 "use client";
 
 import { useConsignmentPermissions } from "../../../../_hooks/use-consignment-permissions";
+import { useConsignmentRequest } from "../../../../_hooks/use-consignment-request";
 import { BoxesManager } from "./boxes-manager";
 
 /**
@@ -18,12 +19,37 @@ import { BoxesManager } from "./boxes-manager";
  * request", and pretending otherwise would imply a distinction the backend does
  * not make.
  */
+/** Detail receiver fields are loosely typed; normalise to string | null. */
+function toText(value: unknown): string | null {
+  return value === null || value === undefined || value === "" ? null : String(value);
+}
+
 export function BoxesTab({ id }: { id: number }) {
   const { canUpdate } = useConsignmentPermissions();
+  // The same cached record the detail page already loaded — the box weight
+  // check needs its routing and receiver address.
+  const request = useConsignmentRequest(id).data?.request;
 
   return (
     <BoxesManager
       consignmentId={id}
+      shipmentContext={
+        request
+          ? {
+              routing: {
+                viaCode: request.via_code ?? "",
+                integratorCode: request.integrator_code ?? "",
+                packageType: request.package_type ?? "",
+              },
+              receiver: {
+                country: toText(request.receiver?.receiver_country),
+                state: toText(request.receiver?.receiver_state),
+                city: toText(request.receiver?.receiver_city),
+                zip: toText(request.receiver?.receiver_zip),
+              },
+            }
+          : undefined
+      }
       permissions={{
         canAddBoxes: canUpdate,
         canUpdateBoxes: canUpdate,

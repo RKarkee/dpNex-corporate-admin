@@ -119,6 +119,11 @@ export default function EditConsignmentRequestPage({
           submitLabel="Save changes"
           submittingLabel="Saving…"
           cancelHref={`/consignments/request/${requestId}`}
+          routing={{
+            viaCode: record.request.via_code ?? "",
+            integratorCode: record.request.integrator_code ?? "",
+            packageType: record.request.package_type ?? "",
+          }}
           error={updateRequest.error}
         />
       ) : (

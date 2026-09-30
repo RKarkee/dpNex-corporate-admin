@@ -119,6 +119,11 @@ export default function EditConsignmentPage({
           submitting={updateConsignment.isPending}
           submitLabel="Save changes"
           submittingLabel="Saving…"
+          routing={{
+            viaCode: record.consignment.via_code ?? "",
+            integratorCode: record.consignment.integrator_code ?? "",
+            packageType: record.consignment.package_type ?? "",
+          }}
           cancelHref={`/consignments/admin/${consignmentId}`}
           error={updateConsignment.error}
         />

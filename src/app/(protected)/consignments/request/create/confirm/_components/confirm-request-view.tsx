@@ -147,6 +147,11 @@ export function ConfirmRequestView() {
         submitLabel="Create request"
         submittingLabel="Creating…"
         cancelHref="/consignments/request"
+        routing={{
+          viaCode: rate.via_code ?? "",
+          integratorCode: rate.integrator_code ?? "",
+          packageType,
+        }}
         error={createRequest.error}
       />
     </div>

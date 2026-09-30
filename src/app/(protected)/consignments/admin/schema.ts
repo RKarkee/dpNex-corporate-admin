@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { PARTY_ADDRESS_TYPES, YES_NO } from "./types";
+import { COORD_DECIMALS, truncateDecimals } from "@/shared/lib/number-input";
 
 /**
  * Validation for the consignment form — one schema, shared by create and edit.
@@ -34,6 +35,16 @@ const optionalNumber = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
   z.coerce.number().optional(),
 );
+
+/**
+ * Latitude / longitude: at most COORD_DECIMALS (3) places, cut not rounded —
+ * `45.34567` is sent as `45.345`. Covers typed, prefilled and auto-filled values.
+ */
+const optionalCoordinate = z.preprocess((value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? truncateDecimals(n, COORD_DECIMALS) : value;
+}, z.number().optional());
 
 /** Exported for the Update Sender dialog, which validates one party on its own. */
 export const senderSchema = z.object({
@@ -76,8 +87,8 @@ export const receiverSchema = z.object({
   receiver_is_resident: z.enum(YES_NO),
   receiver_address_type: z.enum(PARTY_ADDRESS_TYPES),
   /** Derived from the chosen city; editable. */
-  receiver_latitude: optionalNumber,
-  receiver_longitude: optionalNumber,
+  receiver_latitude: optionalCoordinate,
+  receiver_longitude: optionalCoordinate,
 });
 
 const itemSchema = z.object({
@@ -150,26 +161,14 @@ export const consignmentAdminFormSchema = z
 
     send_updates: z.enum(YES_NO),
   })
-  // Both rules are conditional, so neither can live on its own field.
+  // Conditional, so it cannot live on the field. (The consignment-level HS
+  // code rule is gone: that field was removed from create/edit.)
   .superRefine((data, ctx) => {
     if (data.need_pickup === "Y" && !data.pickup_time) {
       ctx.addIssue({
         code: "custom",
         message: "Pickup time is required when a pickup is requested",
         path: ["pickup_time"],
-      });
-    }
-
-    // Saying "yes, I have one" and then leaving it blank is the contradiction
-    // the API rejects — and the reason this cannot be a plain `.min(1)`.
-    if (
-      data.have_hscode === "Y" &&
-      !data.consignment_hs_code?.trim()
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "HS code is required when the shipper has one",
-        path: ["consignment_hs_code"],
       });
     }
   });

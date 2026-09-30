@@ -66,6 +66,8 @@ export interface CheckRatesPayload {
   receiver_zip: string;
   package_type: string;
   total_weight: number;
+  /** From `/meta` `rate_check_item_types`; only sent once the user picks one. */
+  item_type?: string;
 }
 
 export interface SurchargeDetail {
@@ -507,4 +509,82 @@ export interface ReassignPayload {
  */
 export interface CancelPayload {
   reason: string;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Remote address + weight/dimension checks                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The routing a consignment is priced against. It is not a form field: create
+ * takes it from the chosen quote, edit from the stored record. Both checks
+ * below need it.
+ */
+export interface ShipmentRouting {
+  viaCode: string;
+  integratorCode: string;
+  packageType: string;
+}
+
+/** `POST /corporate/consignments/check-remote-address`. */
+export interface CheckRemoteAddressPayload {
+  receiver_country: string;
+  receiver_state: string;
+  receiver_city: string;
+  receiver_zip: string;
+  via_code: string;
+  integrator_code: string;
+  address_type: "receiver";
+}
+
+/** `data.remote_check` of that response. */
+export interface RemoteAddressCheckResult {
+  address_type: string;
+  is_remote: boolean;
+  matched_rule_id: number | null;
+  match_scope: string | null;
+  applies_to: string | null;
+  remote_charge_adjustment: number | string | null;
+  fuel_charge_adjustment: number | string | null;
+  total_extra_charge: number | string | null;
+  display_message: string | null;
+  customer_message: string | null;
+  origin_surcharge: string | null;
+  destination_surcharge: string | null;
+  priority: number | null;
+}
+
+/** `POST /corporate/consignments/calculate-weight-dimension` — one box. */
+export interface CalculateWeightDimensionPayload {
+  box_no: number;
+  via_code: string;
+  integrator_code: string;
+  package_type: string;
+  receiver_country: string;
+  receiver_state: string;
+  receiver_city: string;
+  receiver_zip: string;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+}
+
+/** One row of that response's `data` array — matched back by `box_no`. */
+export interface WeightDimensionCheckResult {
+  box_no: number;
+  weights: {
+    actual_weight: number | string;
+    volumetric_weight: number | string;
+    valid_weight: number | string;
+    /** Current key. */
+    quantity_code?: string;
+    /** Older name for `quantity_code`. */
+    unit?: string;
+    divisor: number | string;
+  };
+  oversize_exception: string | null;
+  overweight_exception: string | null;
+  exception_types: string[];
 }

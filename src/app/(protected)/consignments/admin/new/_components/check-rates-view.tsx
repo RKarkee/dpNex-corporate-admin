@@ -10,7 +10,10 @@ import { Loader2, PackageSearch, Search } from "lucide-react";
 import { AsyncCombobox } from "@/shared/components/ui/async-combobox";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
+import { Combobox } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
+import { useMetaOptions } from "@/shared/hooks/use-meta-options";
+import { blockSignInputProps } from "@/shared/lib/number-input";
 
 import { FieldGroup, FieldShell } from "../../_components/field-shell";
 import { LocationFields } from "../../_components/location-fields";
@@ -45,6 +48,9 @@ const checkRatesSchema = z.object({
   receiver_zip: z.string().min(1, "ZIP / postal code is required"),
   package_type: z.string().min(1, "Package type is required"),
   total_weight: z.coerce.number().positive("Weight must be greater than 0"),
+  // Optional, and deliberately not pre-selected: `/meta` publishes a default,
+  // but the user has to choose what they are shipping themselves.
+  item_type: z.string().optional(),
 });
 
 /**
@@ -79,6 +85,7 @@ export function CheckRatesView() {
       receiver_city: "",
       receiver_zip: "",
       package_type: "",
+      item_type: "",
     },
   });
 
@@ -86,11 +93,15 @@ export function CheckRatesView() {
   const state = watch("receiver_state");
 
   const rates = checkRates.data?.rates;
+  const { rateCheckItemTypeOptions } = useMetaOptions();
 
   const onSubmit = (values: CheckRatesFormValues) => {
+    const { item_type, ...rest } = values;
     checkRates.mutate({
-      ...values,
+      ...rest,
       receiver_state_name: values.receiver_state_name ?? "",
+      // Left out entirely until chosen, so a blank never reaches validation.
+      ...(item_type ? { item_type } : {}),
     });
   };
 
@@ -186,6 +197,25 @@ export function CheckRatesView() {
               )}
             </FieldShell>
 
+            <FieldShell label="Item type" error={errors.item_type?.message}>
+              {() => (
+                <Controller
+                  control={control}
+                  name="item_type"
+                  render={({ field }) => (
+                    <Combobox
+                      options={rateCheckItemTypeOptions}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="Select item type"
+                      searchPlaceholder="Search item types…"
+                      allowCustomValue={false}
+                    />
+                  )}
+                />
+              )}
+            </FieldShell>
+
             <FieldShell
               label="Total weight (kg)"
               required
@@ -198,6 +228,7 @@ export function CheckRatesView() {
                   type="number"
                   step="0.01"
                   min="0"
+                  {...blockSignInputProps}
                   placeholder="20"
                   aria-describedby={describedBy}
                   aria-invalid={errors.total_weight ? true : undefined}

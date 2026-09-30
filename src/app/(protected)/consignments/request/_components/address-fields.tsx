@@ -26,6 +26,11 @@ import type {
   ConsignmentSetValue,
 } from "./form-types";
 import { LocationFields } from "./location-fields";
+import {
+  COORD_DECIMALS,
+  truncateDecimals,
+  truncateInputDecimals,
+} from "@/shared/lib/number-input";
 
 /**
  * One party's contact and address block. Serves both sender and receiver —
@@ -122,8 +127,9 @@ export function AddressFields({
       const lng = Number.parseFloat(longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-      setValue("receiver.latitude", lat, { shouldDirty: false });
-      setValue("receiver.longitude", lng, { shouldDirty: false });
+      // At most COORD_DECIMALS (3) places, cut not rounded: 45.34567 -> 45.345.
+      setValue("receiver.latitude", truncateDecimals(lat, COORD_DECIMALS), { shouldDirty: false });
+      setValue("receiver.longitude", truncateDecimals(lng, COORD_DECIMALS), { shouldDirty: false });
     })();
 
     return () => {
@@ -334,9 +340,14 @@ export function AddressFields({
               <Input
                 id={id}
                 type="number"
-                step="0.0001"
+                step="0.001"
                 aria-describedby={describedBy}
                 {...register("receiver.latitude")}
+                onChange={(event) => {
+                  // Typed or pasted: cut to 3 decimals before the form reads it.
+                  truncateInputDecimals(event, COORD_DECIMALS);
+                  void register("receiver.latitude").onChange(event);
+                }}
               />
             )}
           </FieldShell>
@@ -345,9 +356,14 @@ export function AddressFields({
               <Input
                 id={id}
                 type="number"
-                step="0.0001"
+                step="0.001"
                 aria-describedby={describedBy}
                 {...register("receiver.longitude")}
+                onChange={(event) => {
+                  // Typed or pasted: cut to 3 decimals before the form reads it.
+                  truncateInputDecimals(event, COORD_DECIMALS);
+                  void register("receiver.longitude").onChange(event);
+                }}
               />
             )}
           </FieldShell>

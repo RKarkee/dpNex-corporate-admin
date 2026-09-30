@@ -4,6 +4,10 @@ import { privateApiClient } from "@/shared/api/private-client";
 import type { PageMeta } from "@/shared/api/types";
 
 import type {
+  CalculateWeightDimensionPayload,
+  CheckRemoteAddressPayload,
+  RemoteAddressCheckResult,
+  WeightDimensionCheckResult,
   CheckRatesPayload,
   CheckRatesResult,
   ConsignmentBoxDetail,
@@ -31,6 +35,10 @@ import type {
 const BASE = "/corporate/consignments";
 
 export const ADMIN_ENDPOINTS = {
+  // Shared by both modules: always `/corporate/consignments/...`, never
+  // `consignmentrequests` — the backend serves one endpoint for both.
+  checkRemoteAddress: "/corporate/consignments/check-remote-address",
+  calculateWeightDimension: "/corporate/consignments/calculate-weight-dimension",
   /** Shared with the request module upstream, but called independently here. */
   checkRates: "/corporate/check-rates",
   list: BASE,
@@ -339,4 +347,50 @@ export function restoreConsignment(id: number): Promise<MutationResult> {
   return privateApiClient.mutate("POST", ADMIN_ENDPOINTS.restore(id), undefined, {
     silent: true,
   });
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Remote address + weight/dimension checks                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `POST /corporate/consignments/check-remote-address` — is the receiver's
+ * address remote, and what does that add?
+ *
+ * NOTE the path says `consignments` in BOTH modules: the backend serves one
+ * shared endpoint regardless of record type. Silent — the caller shows the
+ * answer (or the failure) inline under the address.
+ */
+export async function checkRemoteAddress(
+  payload: CheckRemoteAddressPayload,
+  signal?: AbortSignal,
+): Promise<RemoteAddressCheckResult | null> {
+  const data = await privateApiClient.post<unknown>(
+    ADMIN_ENDPOINTS.checkRemoteAddress,
+    payload,
+    { silent: true, signal },
+  );
+  return isRecord(data) && isRecord(data.remote_check)
+    ? (data.remote_check as unknown as RemoteAddressCheckResult)
+    : null;
+}
+
+/**
+ * `POST /corporate/consignments/calculate-weight-dimension` — volumetric and
+ * chargeable ("valid") weight for one box, plus any size/weight exceptions.
+ *
+ * The response is an array; the caller picks its own `box_no` out of it.
+ * Same shared path in both modules, as above.
+ */
+export async function calculateWeightDimension(
+  payload: CalculateWeightDimensionPayload,
+  signal?: AbortSignal,
+): Promise<WeightDimensionCheckResult[]> {
+  const data = await privateApiClient.post<unknown>(
+    ADMIN_ENDPOINTS.calculateWeightDimension,
+    payload,
+    { silent: true, signal },
+  );
+  return Array.isArray(data) ? (data as WeightDimensionCheckResult[]) : [];
 }

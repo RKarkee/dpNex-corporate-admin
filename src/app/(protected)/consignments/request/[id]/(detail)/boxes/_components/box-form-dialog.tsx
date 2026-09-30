@@ -15,12 +15,20 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
+import { WeightDimensionBanner } from "@/shared/components/ui/weight-dimension-banner";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
+import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
+import { cn } from "@/shared/lib/utils";
 
 import { useConsignmentBox, useSaveBox } from "../_hooks/use-consignment-boxes";
+import { useCheckWeightDimension } from "../../../../_hooks/use-check-weight-dimension";
 import { DEFAULT_CURRENCY, DEFAULT_QUANTITY_CODE } from "../../../../schema";
-import type { BoxWritePayload } from "../../../../types";
+import type {
+  BoxWritePayload,
+  ShipmentRouting,
+  WeightDimensionCheckResult,
+} from "../../../../types";
 import { FieldShell } from "../../../../_components/field-shell";
 import { currencyFetcher, hsCodeFetcher } from "../../../../_components/lookup-fetchers";
 import {
@@ -97,6 +105,50 @@ function toNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** Fields the weight check fills in: read-only and greyed, never disabled. */
+const LOCKED_FIELD_CLASS = "bg-muted cursor-not-allowed focus-visible:ring-0";
+/** Amber, not red: "the system changed this, please look" — not "invalid". */
+const CHECK_HIGHLIGHT_CLASS = "border-amber-500 focus-visible:ring-amber-200";
+const CHECK_HINT_CLASS = "mt-1 text-xs text-amber-600";
+
+/**
+ * What the weight check needs from the request itself — its routing and the
+ * receiver's address. The Boxes tab reads them off the loaded record.
+ */
+/** Which fields the latest check response changed — drives the amber highlight. */
+type WeightCheckFlags = { volumetric?: boolean; quantityCode?: boolean };
+
+/** The check result already folded into this box, and what it produced. */
+interface AppliedWeightCheck {
+  result: WeightDimensionCheckResult | null;
+  /** Display only — never submitted. */
+  validWeight: string;
+  flags: WeightCheckFlags;
+}
+
+const EMPTY_APPLIED: AppliedWeightCheck = { result: null, validWeight: "", flags: {} };
+
+/** The values a check response fills in; `undefined` = not in the response. */
+function mapWeightCheck(result: WeightDimensionCheckResult) {
+  const w = result.weights;
+  // `quantity_code` is the current key; older responses called it `unit`.
+  const code = w?.quantity_code ?? w?.unit;
+  return {
+    volumetric:
+      w?.volumetric_weight != null && w.volumetric_weight !== ""
+        ? Number(w.volumetric_weight)
+        : undefined,
+    quantityCode: code ? String(code).trim().toUpperCase() : undefined,
+    validWeight:
+      w?.valid_weight != null && w.valid_weight !== "" ? String(w.valid_weight) : undefined,
+  };
+}
+
+export interface BoxShipmentContext {
+  routing: ShipmentRouting;
+  receiver: { country?: string | null; state?: string | null; city?: string | null; zip?: string | null };
+}
+
 /** One item being composed alongside a new box. */
 interface StagedItem {
   localId: string;
@@ -123,6 +175,8 @@ export interface BoxFormDialogProps {
   boxId?: number;
   /** Pre-fills the number for a new box, so the user rarely has to think. */
   nextBoxNo?: number;
+  /** For the weight check; absent → the check never runs. */
+  shipmentContext?: BoxShipmentContext;
 }
 
 export function BoxFormDialog({
@@ -131,6 +185,7 @@ export function BoxFormDialog({
   consignmentId,
   boxId,
   nextBoxNo,
+  shipmentContext,
 }: BoxFormDialogProps) {
   const isEdit = boxId !== undefined;
 
@@ -346,6 +401,64 @@ export function BoxFormDialog({
 
   const loadingRecord = isEdit && box.isPending;
 
+  // Weight / dimension check — same behaviour as the consignment form: fires
+  // only after the user edits weight/length/width/height (opening a box for
+  // edit does not call it); fills Volumetric Weight (locked), Valid Weight
+  // (locked, display only, never sent) and Quantity Code (still editable);
+  // highlights in amber whatever the latest response changed.
+  const [dimensionsTouched, setDimensionsTouched] = React.useState(false);
+  const [applied, setApplied] = React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
+  const { validWeight, flags } = applied;
+  const setFlags = (update: (current: WeightCheckFlags) => WeightCheckFlags) =>
+    setApplied((current) => ({ ...current, flags: update(current.flags) }));
+
+  const setDimension = (key: "weight" | "length" | "width" | "height", value: string) => {
+    setDimensionsTouched(true);
+    set(key, value);
+  };
+
+  const weightCheck = useCheckWeightDimension({
+    boxNo: toNumber(form.box_no) ?? nextBoxNo ?? 1,
+    routing: shipmentContext?.routing ?? { viaCode: "", integratorCode: "", packageType: "" },
+    receiver: shipmentContext?.receiver ?? {},
+    weight: form.weight,
+    length: form.length,
+    width: form.width,
+    height: form.height,
+    enabled: open && dimensionsTouched && !loadingRecord && Boolean(shipmentContext),
+  });
+
+  // A new result is folded into state during render (React's "adjust state
+  // when a value changes" pattern) — once per result, compared against the
+  // values it replaces so the highlight marks only what actually changed.
+  const latest = weightCheck.status === "success" ? weightCheck.result : null;
+  if (latest && latest !== applied.result) {
+    const mapped = mapWeightCheck(latest);
+    setApplied({
+      result: latest,
+      validWeight: mapped.validWeight ?? applied.validWeight,
+      flags: {
+        volumetric:
+          mapped.volumetric !== undefined &&
+          (form.volumetric_weight === "" || Number(form.volumetric_weight) !== mapped.volumetric),
+        quantityCode:
+          mapped.quantityCode !== undefined &&
+          form.quantity_code.trim().toUpperCase() !== mapped.quantityCode,
+      },
+    });
+    setForm((current) => ({
+      ...current,
+      ...(mapped.volumetric !== undefined ? { volumetric_weight: String(mapped.volumetric) } : {}),
+      ...(mapped.quantityCode !== undefined ? { quantity_code: mapped.quantityCode } : {}),
+    }));
+  }
+
+  // Actual weight (typed) vs Valid Weight (what the system accepts).
+  const weightMismatch =
+    validWeight !== "" &&
+    toNumber(form.weight) !== undefined &&
+    Number(form.weight) !== Number(validWeight);
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -367,6 +480,7 @@ export function BoxFormDialog({
                     id={id}
                     type="number"
                     min="1"
+                    {...blockSignInputProps}
                     value={form.box_no}
                     onChange={(event) => set("box_no", event.target.value)}
                   />
@@ -378,29 +492,96 @@ export function BoxFormDialog({
                   <Input
                     id={id}
                     type="number"
-                    step="0.01"
-                    min="0"
+                    step="any"
+                    {...nonNegativeInputProps}
                     value={form.weight}
-                    onChange={(event) => set("weight", event.target.value)}
+                    onChange={(event) => setDimension("weight", event.target.value)}
                     aria-describedby={describedBy}
                     aria-invalid={fieldError("weight") ? true : undefined}
+                    className={weightMismatch ? CHECK_HIGHLIGHT_CLASS : undefined}
                   />
                 )}
               </FieldShell>
 
-              <FieldShell label="Volumetric weight" hint="Optional">
-                {({ id, describedBy }) => (
+              <FieldShell label="Length (cm)">
+                {({ id }) => (
                   <Input
                     id={id}
                     type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.volumetric_weight}
-                    onChange={(event) =>
-                      set("volumetric_weight", event.target.value)
-                    }
-                    aria-describedby={describedBy}
+                    step="any"
+                    {...nonNegativeInputProps}
+                    value={form.length}
+                    onChange={(event) => setDimension("length", event.target.value)}
                   />
+                )}
+              </FieldShell>
+
+              <FieldShell label="Width (cm)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    step="any"
+                    {...nonNegativeInputProps}
+                    value={form.width}
+                    onChange={(event) => setDimension("width", event.target.value)}
+                  />
+                )}
+              </FieldShell>
+
+              <FieldShell label="Height (cm)">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    step="any"
+                    {...nonNegativeInputProps}
+                    value={form.height}
+                    onChange={(event) => setDimension("height", event.target.value)}
+                  />
+                )}
+              </FieldShell>
+
+              <FieldShell label="Volumetric weight" hint="Auto-filled by weight check">
+                {({ id, describedBy }) => (
+                  <>
+                    <Input
+                      id={id}
+                      type="number"
+                      step="any"
+                      readOnly
+                      tabIndex={-1}
+                      value={form.volumetric_weight}
+                      aria-describedby={describedBy}
+                      className={cn(LOCKED_FIELD_CLASS, flags.volumetric && CHECK_HIGHLIGHT_CLASS)}
+                    />
+                    {flags.volumetric ? (
+                      <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                    ) : null}
+                  </>
+                )}
+              </FieldShell>
+
+              <FieldShell label="Valid weight" hint="Accepted weight — not sent on save">
+                {({ id, describedBy }) => (
+                  <>
+                    <Input
+                      id={id}
+                      type="number"
+                      step="any"
+                      readOnly
+                      tabIndex={-1}
+                      placeholder="Auto-filled by weight check"
+                      value={validWeight}
+                      aria-describedby={describedBy}
+                      className={cn(LOCKED_FIELD_CLASS, weightMismatch && CHECK_HIGHLIGHT_CLASS)}
+                    />
+                    {weightMismatch ? (
+                      <p className={CHECK_HINT_CLASS}>
+                        Differs from entered weight ({form.weight})
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </FieldShell>
 
@@ -414,49 +595,11 @@ export function BoxFormDialog({
                     id={id}
                     type="number"
                     min="1"
+                    {...blockSignInputProps}
                     value={form.no_of_pcs}
                     onChange={(event) => set("no_of_pcs", event.target.value)}
                     aria-describedby={describedBy}
                     aria-invalid={fieldError("no_of_pcs") ? true : undefined}
-                  />
-                )}
-              </FieldShell>
-
-              <FieldShell label="Length (cm)">
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.length}
-                    onChange={(event) => set("length", event.target.value)}
-                  />
-                )}
-              </FieldShell>
-
-              <FieldShell label="Width (cm)">
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.width}
-                    onChange={(event) => set("width", event.target.value)}
-                  />
-                )}
-              </FieldShell>
-
-              <FieldShell label="Height (cm)">
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.height}
-                    onChange={(event) => set("height", event.target.value)}
                   />
                 )}
               </FieldShell>
@@ -467,15 +610,24 @@ export function BoxFormDialog({
                 error={fieldError("quantity_code")}
               >
                 {() => (
-                  <Combobox
-                    options={quantityCodeOptions}
-                    value={form.quantity_code}
-                    onChange={(value) => set("quantity_code", value)}
-                    placeholder="Select or type a code"
-                    searchPlaceholder="Search codes…"
-                    allowCustomValue
-                    aria-invalid={Boolean(fieldError("quantity_code"))}
-                  />
+                  <>
+                    <Combobox
+                      options={quantityCodeOptions}
+                      value={form.quantity_code}
+                      onChange={(value) => {
+                        setFlags((current) => ({ ...current, quantityCode: false }));
+                        set("quantity_code", value);
+                      }}
+                      placeholder="Select or type a code"
+                      searchPlaceholder="Search codes…"
+                      allowCustomValue
+                      aria-invalid={Boolean(fieldError("quantity_code"))}
+                      className={flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined}
+                    />
+                    {flags.quantityCode ? (
+                      <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                    ) : null}
+                  </>
                 )}
               </FieldShell>
 
@@ -534,7 +686,7 @@ export function BoxFormDialog({
                     id={id}
                     type="number"
                     step="0.01"
-                    min="0"
+                    {...nonNegativeInputProps}
                     value={form.declared_value}
                     onChange={(event) => set("declared_value", event.target.value)}
                     aria-describedby={describedBy}
@@ -561,6 +713,21 @@ export function BoxFormDialog({
                 )}
               </FieldShell>
             </div>
+
+            <WeightDimensionBanner
+              status={weightCheck.status}
+              result={
+                weightCheck.result
+                  ? {
+                      divisor: weightCheck.result.weights?.divisor,
+                      oversize_exception: weightCheck.result.oversize_exception,
+                      overweight_exception: weightCheck.result.overweight_exception,
+                      exception_types: weightCheck.result.exception_types,
+                    }
+                  : null
+              }
+              errorMessage={weightCheck.errorMessage}
+            />
 
             {/* Create only — see the note at the top of this file for why an
                 existing box manages its items from the table instead. */}

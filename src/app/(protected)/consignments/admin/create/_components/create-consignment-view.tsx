@@ -146,6 +146,11 @@ export function CreateConsignmentView() {
         submitting={createConsignment.isPending}
         submitLabel="Create consignment"
         submittingLabel="Creating…"
+        routing={{
+          viaCode: rate.via_code ?? "",
+          integratorCode: rate.integrator_code ?? "",
+          packageType,
+        }}
         cancelHref="/consignments/admin"
         error={createConsignment.error}
       />

@@ -13,6 +13,7 @@ import type {
   UpdateConsignmentPayload,
   YesNo,
 } from "./types";
+import { COORD_DECIMALS, truncateDecimals } from "@/shared/lib/number-input";
 
 /**
  * The seam between the form's shape and the wire format.
@@ -45,9 +46,18 @@ function toOptionalNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/**
+ * A stored coordinate, cut to COORD_DECIMALS on load — a 4-decimal value would
+ * otherwise trip the input's `step` and block submit.
+ */
+function toCoordinate(value: unknown): number | undefined {
+  const n = toOptionalNumber(value);
+  return n === undefined ? undefined : truncateDecimals(n, COORD_DECIMALS);
+}
+
 /** The API sometimes returns `"Y "` with trailing space; trim before comparing. */
 function toYesNo(value: unknown, fallback: YesNo): YesNo {
-  const trimmed = typeof value === "string" ? value.trim() : value;
+  const trimmed = typeof value === "string" ? value.trim().toUpperCase() : value;
   return trimmed === "Y" || trimmed === "N" ? trimmed : fallback;
 }
 
@@ -170,7 +180,9 @@ function toSharedPayload(data: ConsignmentAdminFormValues) {
     delivery_note: optional(data.delivery_note),
 
     product_type: optional(data.product_type),
-    consignment_hs_code: optional(data.consignment_hs_code),
+    // The consignment-level HS code is never sent from create/edit — the
+    // field was removed, whatever "HS code known" is set to. Box and item
+    // HS codes are unaffected.
     consignment_goods_desc: data.consignment_goods_desc,
     declared_value: data.declared_value,
     declared_currency: data.declared_currency,
@@ -328,8 +340,8 @@ export function mapDetailToFormValues(
       receiver_is_resident: toYesNo(receiver.receiver_is_resident, "Y"),
       receiver_address_type: (str(receiver.receiver_address_type) ||
         "RESIDENT") as PartyAddressType,
-      receiver_latitude: toOptionalNumber(receiver.receiver_latitude),
-      receiver_longitude: toOptionalNumber(receiver.receiver_longitude),
+      receiver_latitude: toCoordinate(receiver.receiver_latitude),
+      receiver_longitude: toCoordinate(receiver.receiver_longitude),
     },
 
     // A consignment with no boxes is not valid, but it is loadable — start the
@@ -396,9 +408,6 @@ export async function resolveLookupLabels(
   data: ConsignmentAdminFormValues,
 ): Promise<ConsignmentAdminFormValues> {
   const pending: Promise<void>[] = [
-    resolveLookupLabel("hsCode", data.consignment_hs_code).then((label) => {
-      if (label) data.consignment_hs_code_label = label;
-    }),
     resolveLookupLabel("currency", data.declared_currency).then((label) => {
       if (label) data.declared_currency_label = label;
     }),

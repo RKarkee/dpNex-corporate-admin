@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { PARTY_ADDRESS_TYPES, YES_NO } from "./types";
+import { COORD_DECIMALS, truncateDecimals } from "@/shared/lib/number-input";
 
 /**
  * Validation for the consignment form — one schema, shared by create and edit.
@@ -31,6 +32,16 @@ const optionalNumber = z.preprocess(
   z.coerce.number().optional(),
 );
 
+/**
+ * Latitude / longitude: at most COORD_DECIMALS (3) places, cut not rounded —
+ * `45.34567` is sent as `45.345`. Covers typed, prefilled and auto-filled values.
+ */
+const optionalCoordinate = z.preprocess((value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? truncateDecimals(n, COORD_DECIMALS) : value;
+}, z.number().optional());
+
 const partySchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
@@ -58,8 +69,8 @@ export const senderSchema = partySchema;
 
 /** The receiver also carries coordinates, derived from the chosen city. */
 export const receiverSchema = partySchema.extend({
-  latitude: optionalNumber,
-  longitude: optionalNumber,
+  latitude: optionalCoordinate,
+  longitude: optionalCoordinate,
 });
 
 const boxItemSchema = z.object({

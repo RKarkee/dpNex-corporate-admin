@@ -20,14 +20,16 @@ import type {
   ConsignmentSetValue,
   ConsignmentWatch,
 } from "./form-types";
-import { currencyFetcher, hsCodeFetcher } from "./lookup-fetchers";
+import { currencyFetcher } from "./lookup-fetchers";
+import { nonNegativeInputProps } from "@/shared/lib/number-input";
 
 /**
  * Everything about the shipment that is not a party or a box: urgency, dates,
  * pickup, declared value, and the customs description.
  *
- * Two fields here reveal others — pickup time and note appear only once a
- * pickup is asked for, and the HS code only once the user says they have one.
+ * One field reveals others — pickup time and note appear only once a pickup
+ * is asked for. (The consignment-level HS code field is gone: it is never
+ * collected on create/edit, whatever "HS code known" says.)
  * Rendering them disabled instead would leave the user reading fields that
  * cannot apply to them.
  */
@@ -48,8 +50,6 @@ export function ShipmentDetailsFields({
   setValue,
 }: ShipmentDetailsFieldsProps) {
   const needPickup = watch("need_pickup");
-  const haveHsCode = watch("have_hscode");
-  const hsCodeLabel = watch("consignment_hs_code_label");
   const currencyLabel = watch("declared_currency_label");
 
   const { urgencyOptions, productTypeOptions } = useMetaOptions();
@@ -219,33 +219,6 @@ export function ShipmentDetailsFields({
           )}
         </FieldShell>
 
-        {haveHsCode === "Y" ? (
-          <FieldShell label="Consignment HS code">
-            {() => (
-              <Controller
-                control={control}
-                name="consignment_hs_code"
-                render={({ field }) => (
-                  <AsyncCombobox
-                    value={field.value ?? ""}
-                    selectedLabel={hsCodeLabel}
-                    onChange={(option) => {
-                      field.onChange(option.value);
-                      // The label is form state, not a lookup: the trigger has
-                      // to render it long after this list has gone.
-                      setValue("consignment_hs_code_label", option.label);
-                    }}
-                    fetchPage={hsCodeFetcher}
-                    placeholder="Select or type an HS code"
-                    searchPlaceholder="Search HS codes…"
-                    allowCustomValue
-                  />
-                )}
-              />
-            )}
-          </FieldShell>
-        ) : null}
-
         <FieldShell
           label="Declared value"
           required
@@ -256,7 +229,7 @@ export function ShipmentDetailsFields({
               id={id}
               type="number"
               step="0.01"
-              min="0"
+              {...nonNegativeInputProps}
               aria-describedby={describedBy}
               aria-invalid={errors.declared_value ? true : undefined}
               {...register("declared_value")}

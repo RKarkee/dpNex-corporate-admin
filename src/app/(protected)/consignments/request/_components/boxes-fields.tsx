@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Controller, useFieldArray, useWatch } from "react-hook-form";
 import { Boxes, Package, Plus, Trash2 } from "lucide-react";
 
@@ -8,7 +9,13 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
+import { WeightDimensionBanner } from "@/shared/components/ui/weight-dimension-banner";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
+import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
+import { cn } from "@/shared/lib/utils";
+
+import { useCheckWeightDimension } from "../_hooks/use-check-weight-dimension";
+import type { ShipmentRouting, WeightDimensionCheckResult } from "../types";
 
 import { newBoxDefaults, newBoxItemDefaults } from "../schema";
 import { FieldGroup, FieldShell } from "./field-shell";
@@ -25,6 +32,30 @@ import {
   materialFetcher,
 } from "./lookup-fetchers";
 
+/** Fields the weight check fills in: read-only and greyed, never disabled. */
+const LOCKED_FIELD_CLASS = "bg-muted cursor-not-allowed focus-visible:ring-0";
+/**
+ * Weight-check highlights are amber, not red: "the system changed this, please
+ * look", not "this is invalid". Validation errors stay red.
+ */
+const CHECK_HIGHLIGHT_CLASS = "border-amber-500 focus-visible:ring-amber-200";
+const CHECK_HINT_CLASS = "mt-1 text-xs text-amber-600";
+
+/** The receiver's address as the weight check needs it. */
+type ReceiverAddress = {
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  zip?: string | null;
+};
+
+/** Blank or non-numeric → undefined; a coerced form field holds strings. */
+function toNumber(value: unknown): number | undefined {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * The box tree: boxes, and the items inside each of them.
  *
@@ -34,11 +65,44 @@ import {
  * dozens of subscribers to the same cache entry for no benefit.
  */
 
+/** Which fields the latest check response changed — drives the amber highlight. */
+type WeightCheckFlags = { volumetric?: boolean; quantityCode?: boolean };
+
+/** The check result already folded into this box, and what it produced. */
+interface AppliedWeightCheck {
+  result: WeightDimensionCheckResult | null;
+  /** Display only — never submitted. */
+  validWeight: string;
+  flags: WeightCheckFlags;
+}
+
+const EMPTY_APPLIED: AppliedWeightCheck = { result: null, validWeight: "", flags: {} };
+
+/** The values a check response fills in; `undefined` = not in the response. */
+function mapWeightCheck(result: WeightDimensionCheckResult) {
+  const w = result.weights;
+  // `quantity_code` is the current key; older responses called it `unit`.
+  const code = w?.quantity_code ?? w?.unit;
+  return {
+    volumetric:
+      w?.volumetric_weight != null && w.volumetric_weight !== ""
+        ? Number(w.volumetric_weight)
+        : undefined,
+    quantityCode: code ? String(code).trim().toUpperCase() : undefined,
+    validWeight:
+      w?.valid_weight != null && w.valid_weight !== "" ? String(w.valid_weight) : undefined,
+  };
+}
+
 export interface BoxesFieldsProps {
   control: ConsignmentControl;
   register: ConsignmentRegister;
   setValue: ConsignmentSetValue;
   errors: ConsignmentErrors;
+  /** From the quote (create) or the record (edit) — for the weight check. */
+  routing: ShipmentRouting;
+  /** The receiver's current address — for the weight check. */
+  receiver: ReceiverAddress;
 }
 
 export function BoxesFields({
@@ -46,6 +110,8 @@ export function BoxesFields({
   register,
   setValue,
   errors,
+  routing,
+  receiver,
 }: BoxesFieldsProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "boxes" });
   const { quantityCodeOptions, genderOptions } = useMetaOptions();
@@ -89,6 +155,8 @@ export function BoxesFields({
             index={index}
             quantityCodeOptions={quantityCodeOptions}
             genderOptions={genderOptions}
+            routing={routing}
+            receiver={receiver}
             onRemove={() => remove(index)}
             // The schema requires one, so the last box cannot be removed.
             canRemove={fields.length > 1}
@@ -113,6 +181,8 @@ interface BoxRowProps {
   genderOptions: ComboboxOption[];
   onRemove: () => void;
   canRemove: boolean;
+  routing: ShipmentRouting;
+  receiver: ReceiverAddress;
 }
 
 function BoxRow({
@@ -125,6 +195,8 @@ function BoxRow({
   genderOptions,
   onRemove,
   canRemove,
+  routing,
+  receiver,
 }: BoxRowProps) {
   const boxErrors = errors.boxes?.[index];
 
@@ -135,6 +207,81 @@ function BoxRow({
     control,
     name: `boxes.${index}.declared_currency_label`,
   });
+
+  // Weight / dimension check. Fires only after the user edits this box's
+  // weight, length, width or height — never when a record is loaded for edit.
+  const boxNo = useWatch({ control, name: `boxes.${index}.box_no` });
+  const weight = useWatch({ control, name: `boxes.${index}.weight` });
+  const length = useWatch({ control, name: `boxes.${index}.length` });
+  const width = useWatch({ control, name: `boxes.${index}.width` });
+  const height = useWatch({ control, name: `boxes.${index}.height` });
+  const volumetric = useWatch({ control, name: `boxes.${index}.volumetric_weight` });
+  const quantityCode = useWatch({ control, name: `boxes.${index}.quantity_code` });
+
+  const [dimensionsTouched, setDimensionsTouched] = React.useState(false);
+  const [applied, setApplied] = React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
+  const { validWeight, flags } = applied;
+  const setFlags = (update: (current: WeightCheckFlags) => WeightCheckFlags) =>
+    setApplied((current) => ({ ...current, flags: update(current.flags) }));
+
+  const weightCheck = useCheckWeightDimension({
+    boxNo: Number(boxNo) || index + 1,
+    routing,
+    receiver,
+    weight,
+    length,
+    width,
+    height,
+    enabled: dimensionsTouched,
+  });
+
+  // A new result is folded into local state during render (React's "adjust
+  // state when a value changes" pattern), compared against the values it is
+  // about to replace — so the highlight marks only what actually changed.
+  const latest = weightCheck.status === "success" ? weightCheck.result : null;
+  if (latest && latest !== applied.result) {
+    const mapped = mapWeightCheck(latest);
+    setApplied({
+      result: latest,
+      validWeight: mapped.validWeight ?? applied.validWeight,
+      flags: {
+        volumetric:
+          mapped.volumetric !== undefined &&
+          (volumetric === "" || volumetric == null || Number(volumetric) !== mapped.volumetric),
+        quantityCode:
+          mapped.quantityCode !== undefined &&
+          String(quantityCode ?? "").trim().toUpperCase() !== mapped.quantityCode,
+      },
+    });
+  }
+
+  // Writing into react-hook-form is a side effect, so it stays in an effect —
+  // once per applied result, never on the re-render its own setValue causes.
+  // Keyed on the result only: a row's index shifting after a removal must not
+  // re-apply an old result over a Quantity Code the user has since edited.
+  React.useEffect(() => {
+    if (!applied.result) return;
+    const mapped = mapWeightCheck(applied.result);
+    if (mapped.volumetric !== undefined) {
+      setValue(`boxes.${index}.volumetric_weight`, mapped.volumetric, { shouldDirty: true });
+    }
+    if (mapped.quantityCode !== undefined) {
+      setValue(`boxes.${index}.quantity_code`, mapped.quantityCode, { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applied.result]);
+
+  // Actual weight is what the user typed; Valid Weight is what the system
+  // accepts. Both are highlighted while they disagree.
+  const weightMismatch =
+    validWeight !== "" &&
+    weight !== "" &&
+    weight != null &&
+    !Number.isNaN(Number(weight)) &&
+    Number(weight) !== Number(validWeight);
+
+  /** Marks that the user changed a dimension — what arms the check. */
+  const touchDimension = { onChange: () => setDimensionsTouched(true) };
 
   return (
     <div className="overflow-hidden rounded-xl border border-border">
@@ -158,7 +305,13 @@ function BoxRow({
       <div className="grid gap-5 p-4 sm:grid-cols-2 lg:grid-cols-3">
         <FieldShell label="Box no." required>
           {({ id }) => (
-            <Input id={id} type="number" min="1" {...register(`boxes.${index}.box_no`)} />
+            <Input
+              id={id}
+              type="number"
+              min="1"
+              {...blockSignInputProps}
+              {...register(`boxes.${index}.box_no`)}
+            />
           )}
         </FieldShell>
 
@@ -167,43 +320,94 @@ function BoxRow({
             <Input
               id={id}
               type="number"
-              step="0.01"
-              min="0"
+              step="any"
+              {...nonNegativeInputProps}
               aria-describedby={describedBy}
               aria-invalid={boxErrors?.weight ? true : undefined}
-              {...register(`boxes.${index}.weight`)}
-            />
-          )}
-        </FieldShell>
-
-        <FieldShell label="Volumetric weight" hint="Optional">
-          {({ id, describedBy }) => (
-            <Input
-              id={id}
-              type="number"
-              step="0.01"
-              min="0"
-              aria-describedby={describedBy}
-              {...register(`boxes.${index}.volumetric_weight`)}
+              className={weightMismatch ? CHECK_HIGHLIGHT_CLASS : undefined}
+              {...register(`boxes.${index}.weight`, touchDimension)}
             />
           )}
         </FieldShell>
 
         <FieldShell label="Length (cm)">
           {({ id }) => (
-            <Input id={id} type="number" step="0.1" min="0" {...register(`boxes.${index}.length`)} />
+            <Input
+              id={id}
+              type="number"
+              step="any"
+              {...nonNegativeInputProps}
+              {...register(`boxes.${index}.length`, touchDimension)}
+            />
           )}
         </FieldShell>
 
         <FieldShell label="Width (cm)">
           {({ id }) => (
-            <Input id={id} type="number" step="0.1" min="0" {...register(`boxes.${index}.width`)} />
+            <Input
+              id={id}
+              type="number"
+              step="any"
+              {...nonNegativeInputProps}
+              {...register(`boxes.${index}.width`, touchDimension)}
+            />
           )}
         </FieldShell>
 
         <FieldShell label="Height (cm)">
           {({ id }) => (
-            <Input id={id} type="number" step="0.1" min="0" {...register(`boxes.${index}.height`)} />
+            <Input
+              id={id}
+              type="number"
+              step="any"
+              {...nonNegativeInputProps}
+              {...register(`boxes.${index}.height`, touchDimension)}
+            />
+          )}
+        </FieldShell>
+
+        {/* Locked: filled by the weight check. readOnly, NOT disabled — a
+            disabled react-hook-form input submits as undefined. */}
+        <FieldShell label="Volumetric weight" hint="Auto-filled by weight check">
+          {({ id, describedBy }) => (
+            <>
+              <Input
+                id={id}
+                type="number"
+                step="any"
+                readOnly
+                tabIndex={-1}
+                aria-describedby={describedBy}
+                className={cn(LOCKED_FIELD_CLASS, flags.volumetric && CHECK_HIGHLIGHT_CLASS)}
+                {...register(`boxes.${index}.volumetric_weight`)}
+              />
+              {flags.volumetric ? (
+                <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+              ) : null}
+            </>
+          )}
+        </FieldShell>
+
+        <FieldShell label="Valid weight" hint="Accepted weight — not sent on save">
+          {({ id, describedBy }) => (
+            <>
+              <Input
+                id={id}
+                type="number"
+                step="any"
+                readOnly
+                tabIndex={-1}
+                placeholder="Auto-filled by weight check"
+                aria-describedby={describedBy}
+                value={validWeight}
+                className={cn(LOCKED_FIELD_CLASS, weightMismatch && CHECK_HIGHLIGHT_CLASS)}
+              />
+              {weightMismatch ? (
+                <p className={CHECK_HINT_CLASS}>
+                  Differs from entered weight ({String(weight)})
+                </p>
+              ) : null}
+            </>
           )}
         </FieldShell>
 
@@ -217,6 +421,7 @@ function BoxRow({
               id={id}
               type="number"
               min="1"
+              {...blockSignInputProps}
               aria-describedby={describedBy}
               aria-invalid={boxErrors?.no_of_pcs ? true : undefined}
               {...register(`boxes.${index}.no_of_pcs`)}
@@ -226,20 +431,29 @@ function BoxRow({
 
         <FieldShell label="Quantity code" required>
           {() => (
-            <Controller
-              control={control}
-              name={`boxes.${index}.quantity_code`}
-              render={({ field }) => (
-                <Combobox
-                  options={quantityCodeOptions}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  placeholder="Select or type a code"
-                  searchPlaceholder="Search codes…"
-                  allowCustomValue
-                />
-              )}
-            />
+            <>
+              <Controller
+                control={control}
+                name={`boxes.${index}.quantity_code`}
+                render={({ field }) => (
+                  <Combobox
+                    options={quantityCodeOptions}
+                    value={field.value ?? ""}
+                    onChange={(value) => {
+                      setFlags((f) => ({ ...f, quantityCode: false }));
+                      field.onChange(value);
+                    }}
+                    placeholder="Select or type a code"
+                    searchPlaceholder="Search codes…"
+                    allowCustomValue
+                    className={flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined}
+                  />
+                )}
+              />
+              {flags.quantityCode ? (
+                <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+              ) : null}
+            </>
           )}
         </FieldShell>
 
@@ -307,7 +521,7 @@ function BoxRow({
               id={id}
               type="number"
               step="0.01"
-              min="0"
+              {...nonNegativeInputProps}
               aria-describedby={describedBy}
               aria-invalid={boxErrors?.declared_value ? true : undefined}
               {...register(`boxes.${index}.declared_value`)}
@@ -332,6 +546,22 @@ function BoxRow({
           )}
         </FieldShell>
       </div>
+
+      <WeightDimensionBanner
+        status={weightCheck.status}
+        result={
+          weightCheck.result
+            ? {
+                divisor: weightCheck.result.weights?.divisor,
+                oversize_exception: weightCheck.result.oversize_exception,
+                overweight_exception: weightCheck.result.overweight_exception,
+                exception_types: weightCheck.result.exception_types,
+              }
+            : null
+        }
+        errorMessage={weightCheck.errorMessage}
+        className="mx-4 mb-4"
+      />
 
       <BoxItemsFields
         control={control}
@@ -447,6 +677,21 @@ function BoxItemRow({
     name: `${base}.item_manufacturer_label`,
   });
   const currencyLabel = useWatch({ control, name: `${base}.item_currency_label` });
+
+  // Total = Quantity x Rate, kept in sync here; the field itself is locked.
+  // After its own setValue the total already matches, so this stops.
+  const quantity = useWatch({ control, name: `${base}.quantity` });
+  const rate = useWatch({ control, name: `${base}.item_rate` });
+  const total = useWatch({ control, name: `${base}.item_total_amount` });
+  React.useEffect(() => {
+    const q = toNumber(quantity);
+    const r = toNumber(rate);
+    if (q === undefined || r === undefined) return;
+    const next = Math.round(q * r * 100) / 100;
+    if (toNumber(total) !== next) {
+      setValue(`${base}.item_total_amount`, next, { shouldDirty: true });
+    }
+  }, [quantity, rate, total, base, setValue]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -582,6 +827,7 @@ function BoxItemRow({
               id={id}
               type="number"
               min="1"
+              {...blockSignInputProps}
               aria-describedby={describedBy}
               aria-invalid={itemErrors?.quantity ? true : undefined}
               {...register(`${base}.quantity`)}
@@ -614,7 +860,7 @@ function BoxItemRow({
               id={id}
               type="number"
               step="0.01"
-              min="0"
+              {...nonNegativeInputProps}
               aria-describedby={describedBy}
               aria-invalid={itemErrors?.item_rate ? true : undefined}
               {...register(`${base}.item_rate`)}
@@ -631,8 +877,11 @@ function BoxItemRow({
             <Input
               id={id}
               type="number"
-              step="0.01"
-              min="0"
+              step="any"
+              readOnly
+              tabIndex={-1}
+              placeholder="Quantity × Rate"
+              className={LOCKED_FIELD_CLASS}
               aria-describedby={describedBy}
               aria-invalid={itemErrors?.item_total_amount ? true : undefined}
               {...register(`${base}.item_total_amount`)}

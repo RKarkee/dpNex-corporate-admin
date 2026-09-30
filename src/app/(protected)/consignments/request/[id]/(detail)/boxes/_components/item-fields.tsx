@@ -5,6 +5,7 @@ import { Combobox } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
+import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
 
 import { DEFAULT_CURRENCY, DEFAULT_QUANTITY_CODE } from "../../../../schema";
 import type { ItemWritePayload } from "../../../../types";
@@ -122,7 +123,7 @@ export function validateItemForm(
 
   const quantity = toNumber(form.quantity);
   if (quantity === undefined || quantity <= 0) {
-    errors.quantity = "Quantity must be at least 1";
+    errors.quantity = "Quantity must be greater than 0";
   }
   if (!form.item_quantity_code) {
     errors.item_quantity_code = "Quantity code is required";
@@ -197,6 +198,20 @@ export function ItemFields({
   const resolvedCurrency = useLookupLabel("currency", value.item_currency);
 
   const error = (name: string) => errors[name];
+
+  // Total = Quantity x Rate, recomputed whenever either changes; the field
+  // itself is locked.
+  const withTotal = (patch: Partial<ItemFormState>): Partial<ItemFormState> => {
+    const quantity = toNumber(patch.quantity ?? value.quantity);
+    const rate = toNumber(patch.item_rate ?? value.item_rate);
+    return {
+      ...patch,
+      item_total_amount:
+        quantity !== undefined && rate !== undefined
+          ? String(Math.round(quantity * rate * 100) / 100)
+          : "",
+    };
+  };
 
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -301,9 +316,10 @@ export function ItemFields({
             id={id}
             type="number"
             min="1"
+            {...blockSignInputProps}
             value={value.quantity}
             disabled={disabled}
-            onChange={(event) => onChange({ quantity: event.target.value })}
+            onChange={(event) => onChange(withTotal({ quantity: event.target.value }))}
             aria-describedby={describedBy}
             aria-invalid={error("quantity") ? true : undefined}
           />
@@ -335,10 +351,10 @@ export function ItemFields({
             id={id}
             type="number"
             step="0.01"
-            min="0"
+            {...nonNegativeInputProps}
             value={value.item_rate}
             disabled={disabled}
-            onChange={(event) => onChange({ item_rate: event.target.value })}
+            onChange={(event) => onChange(withTotal({ item_rate: event.target.value }))}
             aria-describedby={describedBy}
             aria-invalid={error("item_rate") ? true : undefined}
           />
@@ -354,13 +370,13 @@ export function ItemFields({
           <Input
             id={id}
             type="number"
-            step="0.01"
-            min="0"
+            step="any"
+            readOnly
+            tabIndex={-1}
+            placeholder="Quantity × Rate"
+            className="bg-muted cursor-not-allowed focus-visible:ring-0"
             value={value.item_total_amount}
             disabled={disabled}
-            onChange={(event) =>
-              onChange({ item_total_amount: event.target.value })
-            }
             aria-describedby={describedBy}
             aria-invalid={error("item_total_amount") ? true : undefined}
           />

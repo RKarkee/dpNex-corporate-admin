@@ -5,6 +5,7 @@ import { useForm, useWatch, type Path } from "react-hook-form";
 import { Loader2, UserPen } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
+import { RemoteAddressBanner } from "@/shared/components/ui/remote-address-banner";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
 
 import { AddressFields } from "../../../../_components/address-fields";
 import { reportApiError } from "../../../../_components/report-api-error";
+import { useCheckRemoteAddress } from "../../../../_hooks/use-check-remote-address";
 import {
   useUpdateRequestReceiver,
   useUpdateRequestSender,
@@ -141,6 +143,20 @@ function UpdatePartyForm({
 
   const country = useWatch({ control, name: `${party}.country` }) as string;
   const state = useWatch({ control, name: `${party}.state` }) as string;
+  const city = useWatch({ control, name: `${party}.city` }) as string;
+  const zip = useWatch({ control, name: `${party}.zip` }) as string;
+
+  // Receiver only: the same remote-address check as the consignment form,
+  // against the record's own routing (not editable here).
+  const remoteAddressCheck = useCheckRemoteAddress({
+    country,
+    state,
+    city,
+    zip,
+    viaCode: detail.request.via_code,
+    integratorCode: detail.request.integrator_code,
+    enabled: party === "receiver",
+  });
 
   const fieldPath = (key: string) => `${party}.${key}` as Path<ConsignmentFormInput>;
 
@@ -207,6 +223,14 @@ function UpdatePartyForm({
         onStateChange={() => setValue(fieldPath("city"), "")}
         showGeo={party === "receiver"}
       />
+
+      {party === "receiver" ? (
+        <RemoteAddressBanner
+          status={remoteAddressCheck.status}
+          result={remoteAddressCheck.result}
+          errorMessage={remoteAddressCheck.errorMessage}
+        />
+      ) : null}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone} disabled={busy}>

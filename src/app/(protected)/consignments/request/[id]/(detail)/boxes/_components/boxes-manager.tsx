@@ -29,7 +29,7 @@ import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import { useConsignmentBoxes, useDeleteBox } from "../_hooks/use-consignment-boxes";
 import type { ConsignmentBoxDetail } from "../../../../types";
-import { BoxFormDialog } from "./box-form-dialog";
+import { BoxFormDialog, type BoxShipmentContext } from "./box-form-dialog";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
 import { ItemsSubTable } from "./items-sub-table";
 
@@ -72,11 +72,14 @@ function dimensions(box: ConsignmentBoxDetail): string {
 export interface BoxesManagerProps {
   consignmentId: number | string;
   permissions?: BoxPermissions;
+  /** The request's routing and receiver address, for the box weight check. */
+  shipmentContext?: BoxShipmentContext;
 }
 
 export function BoxesManager({
   consignmentId,
   permissions = {},
+  shipmentContext,
 }: BoxesManagerProps) {
   const { quantityCodeOptions } = useMetaOptions();
 
@@ -309,6 +312,7 @@ export function BoxesManager({
           consignmentId={consignmentId}
           boxId={dialog.boxId}
           nextBoxNo={nextBoxNo}
+          shipmentContext={shipmentContext}
         />
       ) : null}
 

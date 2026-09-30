@@ -54,6 +54,8 @@ export interface MetaOptions {
   genderOptions: ComboboxOption[];
   productTypeOptions: ComboboxOption[];
   urgencyOptions: ComboboxOption[];
+  /** What is being shipped, for check-rates — `rate_check_item_types`. */
+  rateCheckItemTypeOptions: ComboboxOption[];
   /** PENDING, APPROVED, REJECTED, CANCELLED — the approval-request lifecycle. */
   approvalStatusOptions: ComboboxOption[];
   /** Credit limit, discount, corporate info update, profile update. */
@@ -89,6 +91,7 @@ export function useMetaOptions(): MetaOptions {
       genderOptions: toOptions(controls.item_gender_type?.values),
       productTypeOptions: toOptions(controls.consignment_product_type?.values),
       urgencyOptions: toOptions(controls.consignment_urgency?.values),
+      rateCheckItemTypeOptions: toOptions(controls.rate_check_item_types?.values),
       approvalStatusOptions: toOptions(controls.approval_statuses?.values),
       approvalTypeOptions: toOptions(controls.approval_request_types?.values),
       ticketStatusOptions: toOptions(controls.support_ticket_statuses?.values),
