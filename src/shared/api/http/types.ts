@@ -42,6 +42,12 @@ export interface RequestOptions {
   retries?: number;
   /** Free-form, for your own interceptors to read. */
   meta?: Record<string, unknown>;
+  /**
+   * Upload progress for a request body (a file upload), as a whole percentage
+   * 0–100. Only reported when the browser knows the total size. Optional:
+   * leave it off and nothing changes.
+   */
+  onUploadProgress?: (percent: number) => void;
 }
 
 /**

@@ -73,4 +73,12 @@ export const consignmentRequestKeys = {
   /** Per-box weight check — keyed on the box and its dimensions only. */
   weightDimensionCheck: (params: Record<string, string>) =>
     [...consignmentRequestKeys.all, "weight-dimension-check", params] as const,
+
+  /** One bulk-upload batch — its status, and its rows page by page. */
+  bulkUpload: (batchCode: string) =>
+    [...consignmentRequestKeys.all, "bulk-upload", batchCode] as const,
+  bulkUploadStatus: (batchCode: string) =>
+    [...consignmentRequestKeys.bulkUpload(batchCode), "status"] as const,
+  bulkUploadRows: (batchCode: string, params: { perPage: number }) =>
+    [...consignmentRequestKeys.bulkUpload(batchCode), "rows", params] as const,
 } as const;

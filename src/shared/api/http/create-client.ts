@@ -344,6 +344,13 @@ export function createApiClient(config: ClientConfig): { client: ApiClient; axio
       signal: options.signal,
       timeout: options.timeout,
       responseType: options.responseType === "blob" ? "blob" : "text",
+      onUploadProgress: options.onUploadProgress
+        ? (event) => {
+            if (event.total) {
+              options.onUploadProgress?.(Math.round((event.loaded / event.total) * 100));
+            }
+          }
+        : undefined,
       app: options,
     };
   }

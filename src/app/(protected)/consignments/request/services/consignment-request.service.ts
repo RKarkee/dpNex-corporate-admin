@@ -51,6 +51,15 @@ export const ENDPOINTS = {
   deleted: `${BASE}/deleted`,
   restore: (id: number | string) => `${BASE}/${id}/restore`,
 
+  // Bulk upload from a spreadsheet — see bulk-upload.service.ts.
+  bulkUpload: `${BASE}/bulk-upload`,
+  bulkUploadTemplate: `${BASE}/bulk-upload/template`,
+  bulkUploadBatch: (batchCode: string) => `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}`,
+  bulkUploadRows: (batchCode: string) =>
+    `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}/rows`,
+  bulkUploadErrors: (batchCode: string) =>
+    `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}/errors`,
+
   // Workflow actions — see consignment-actions.service.ts.
   updateStatus: (id: number | string) => `${BASE}/${id}/updatestatus`,
   updateSender: (id: number | string) => `${BASE}/${id}/updateSender`,

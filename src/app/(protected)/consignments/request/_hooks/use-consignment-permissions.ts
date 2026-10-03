@@ -24,6 +24,8 @@ export interface ConsignmentPermissions {
   canUpdateStatus: boolean;
   canAddCharges: boolean;
   canUpdateCharges: boolean;
+  /** Creating requests from a spreadsheet — the Bulk Upload tab. */
+  canBulkUpload: boolean;
 }
 
 export function useConsignmentPermissions(): ConsignmentPermissions {
@@ -39,5 +41,6 @@ export function useConsignmentPermissions(): ConsignmentPermissions {
     canUpdateStatus: canAny(user, CONSIGNMENT_PERMISSIONS.updateStatus),
     canAddCharges: canAny(user, CONSIGNMENT_PERMISSIONS.addCharges),
     canUpdateCharges: canAny(user, CONSIGNMENT_PERMISSIONS.updateCharges),
+    canBulkUpload: canAny(user, CONSIGNMENT_PERMISSIONS.bulkUpload),
   };
 }

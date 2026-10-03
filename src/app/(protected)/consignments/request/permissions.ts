@@ -32,6 +32,7 @@ export const CONSIGNMENT_PERMISSIONS: {
   updateStatus: string[];
   addCharges: string[];
   updateCharges: string[];
+  bulkUpload: string[];
 } = {
   view: ["view_consignment", "view_any_consignment"],
   create: ["create_consignment", "add_consignment"],
@@ -45,6 +46,9 @@ export const CONSIGNMENT_PERMISSIONS: {
   addCharges: ["add_consignment_charges"],
   // Also gates deleting a charge — no separate delete grant is published.
   updateCharges: ["update_consignment_charges"],
+  // Creating requests from a spreadsheet — the Bulk Upload tab. Confirmed name,
+  // the same grant the staff console checks.
+  bulkUpload: ["bulk_upload_consignment_requests"],
 };
 
 /** Opening the list needs either — reading it, or being able to add to it. */
