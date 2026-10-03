@@ -16,7 +16,7 @@ import { roleLabel, type User } from "@/shared/auth/types";
  * grows past `STATS_SAMPLE`, the role breakdown is a floor rather than a
  * total, and the UI must say so instead of quietly under-reporting.
  */
-const STATS_SAMPLE = 200;
+const STATS_SAMPLE = 100;
 
 export interface RoleCount {
   id: number;

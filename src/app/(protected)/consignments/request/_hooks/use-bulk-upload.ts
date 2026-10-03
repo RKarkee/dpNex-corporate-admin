@@ -1,17 +1,25 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { toast } from "@/shared/components/toast";
 
 import { downloadBlob } from "../_lib/download-file";
 import {
   fetchBulkUploadBatch,
+  fetchBulkUploadBatches,
   fetchBulkUploadErrorReport,
   fetchBulkUploadRows,
   fetchBulkUploadTemplate,
   isBatchInProgress,
   uploadBulkConsignmentRequests,
+  type BulkUploadBatchListParams,
 } from "../services/bulk-upload.service";
 import { consignmentRequestKeys } from "./query-keys";
 
@@ -31,15 +39,22 @@ const IN_PROGRESS_POLL_MS = 5000;
  * Uploads a file. New requests may now exist, so the list is refreshed; the
  * caller shows the outcome (a rejected file is spelled out under the upload).
  */
+/** Lets the upload dialog ask "is a file uploading right now?" via `useIsMutating`. */
+export const BULK_UPLOAD_MUTATION_KEY = ["consignment-requests", "bulk-upload", "upload"] as const;
+
 export function useUploadBulkConsignmentRequests() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: BULK_UPLOAD_MUTATION_KEY,
     mutationFn: ({ file, onProgress }: { file: File; onProgress?: (percent: number) => void }) =>
       uploadBulkConsignmentRequests(file, onProgress),
 
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: consignmentRequestKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: consignmentRequestKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: consignmentRequestKeys.bulkUploadLists() }),
+      ]);
     },
   });
 }
@@ -103,5 +118,21 @@ export function useBulkUploadRows(batchCode: string | null, perPage: number) {
     },
     enabled: Boolean(batchCode),
     retry: false,
+  });
+}
+
+/**
+ * The uploads list — `GET bulk-upload`, filtered and paginated. The previous
+ * page stays on screen while the next loads. While any upload on screen is
+ * still running (`is_finished: false`) the list re-checks every few seconds,
+ * and stops by itself once they have all finished.
+ */
+export function useBulkUploadBatches(params: BulkUploadBatchListParams) {
+  return useQuery({
+    queryKey: consignmentRequestKeys.bulkUploadList({ ...params }),
+    queryFn: ({ signal }) => fetchBulkUploadBatches(params, signal),
+    placeholderData: keepPreviousData,
+    refetchInterval: (query) =>
+      query.state.data?.batches.some((batch) => !batch.is_finished) ? IN_PROGRESS_POLL_MS : false,
   });
 }

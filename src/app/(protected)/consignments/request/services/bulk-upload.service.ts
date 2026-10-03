@@ -9,6 +9,7 @@ import { ENDPOINTS } from "./consignment-request.service";
  * `/corporate/consignmentrequests/bulk-upload…`. The same contract the staff
  * console uses under `/admin/…`.
  *
+ *   GET  bulk-upload                     the uploads, filtered and paginated → JSON
  *   POST bulk-upload                     one multipart `file` (.xlsx, .xls, .csv; max 10 MB)
  *   GET  bulk-upload/template            the blank template            → a FILE
  *   GET  bulk-upload/{batch_code}        the batch's status and counts → JSON
@@ -59,7 +60,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * so, and the status query re-checks on its own while one is showing.
  */
 export function isBatchInProgress(batch: BulkUploadBatch | null | undefined): boolean {
-  return ["PROCESSING", "QUEUED", "PENDING", "IN_PROGRESS", "RUNNING"].includes(
+  return ["PENDING", "VALIDATING", "PROCESSING", "QUEUED", "IN_PROGRESS", "RUNNING"].includes(
     String(batch?.status ?? "").toUpperCase(),
   );
 }
@@ -229,6 +230,84 @@ export async function fetchBulkUploadRows(
   const raw = response.raw;
   return {
     rows: findRows(isRecord(raw) && "data" in raw ? raw.data : raw),
+    meta: response.meta,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The uploads list                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** One row of `GET bulk-upload` — the documented `consignmentbulkimportbatches` shape. */
+export interface BulkUploadBatchListItem {
+  id: number;
+  batch_code: string;
+  portal: string | null;
+  original_filename: string | null;
+  status: string;
+  total_rows: number | null;
+  validation_error_rows: number | null;
+  processed_rows: number | null;
+  succeeded_rows: number | null;
+  failed_rows: number | null;
+  succeeded_consignments: number | null;
+  failed_consignments: number | null;
+  error_message: string | null;
+  has_errors: boolean;
+  is_finished: boolean;
+  progress_percent: number | null;
+  requested_by: number | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+}
+
+/**
+ * The list's query, as the URL holds it ("" = not set; booleans "true"/"false").
+ *
+ * No `portal`, `mine` or `requested_by`: a corporate caller only ever sees its
+ * own portal's uploads, so none of those narrow anything here.
+ */
+export interface BulkUploadBatchListParams {
+  page: number;
+  perPage: number;
+  search: string;
+  status: string;
+  is_finished: string;
+  has_errors: string;
+  created_from: string;
+  created_to: string;
+}
+
+export interface BulkUploadBatchListResult {
+  batches: BulkUploadBatchListItem[];
+  meta: PageMeta | undefined;
+}
+
+/** `GET …/bulk-upload` — the uploads, newest first. Blank filters stay off the URL. */
+export async function fetchBulkUploadBatches(
+  params: BulkUploadBatchListParams,
+  signal?: AbortSignal,
+): Promise<BulkUploadBatchListResult> {
+  const { page, perPage, ...filters } = params;
+  const query: Record<string, string | number> = { page, per_page: perPage };
+  for (const [key, value] of Object.entries(filters)) {
+    if (value.trim()) query[key] = value.trim();
+  }
+
+  const response = await privateApiClient.request<unknown>("GET", ENDPOINTS.bulkUpload, undefined, {
+    params: query,
+    silent: true,
+    signal,
+  });
+  const raw = response.raw;
+  const data = isRecord(raw) && "data" in raw ? raw.data : raw;
+  const list =
+    isRecord(data) && Array.isArray(data.consignmentbulkimportbatches)
+      ? data.consignmentbulkimportbatches.filter(isRecord)
+      : findRows(data);
+  return {
+    batches: list as unknown as BulkUploadBatchListItem[],
     meta: response.meta,
   };
 }

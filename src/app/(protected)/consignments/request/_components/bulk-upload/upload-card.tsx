@@ -1,18 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, Download, FileUp, Loader2, Upload } from "lucide-react";
+import { AlertCircle, Download, Loader2, Upload } from "lucide-react";
 
 import { isApiError } from "@/shared/api/errors";
 import { Button } from "@/shared/components/ui/button";
-import { Card } from "@/shared/components/ui/card";
 
 import {
   useDownloadBulkUploadTemplate,
   useUploadBulkConsignmentRequests,
 } from "../../_hooks/use-bulk-upload";
 import type { BulkUploadResult } from "../../services/bulk-upload.service";
-import { FieldGroup } from "../field-shell";
 import { FileDropzone, validateBulkFile } from "./file-dropzone";
 
 /** The reason a failed upload gives: `errors.file` on a 422, else the message. */
@@ -46,7 +44,7 @@ interface UploadCardProps {
   onUploaded: (result: BulkUploadResult) => void;
 }
 
-/** Template → choose file → upload, as three numbered steps. */
+/** Template → choose file → upload, as three numbered steps. Rendered inside the upload dialog, which supplies the title. */
 export function UploadCard({ onUploaded }: UploadCardProps) {
   const [file, setFile] = React.useState<File | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -82,13 +80,6 @@ export function UploadCard({ onUploaded }: UploadCardProps) {
   const uploading = upload.isPending;
 
   return (
-    <Card className="p-6 sm:p-8">
-      <FieldGroup
-        title="Upload consignment requests"
-        description="Create many consignment requests at once from a spreadsheet."
-        icon={FileUp}
-        className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1"
-      >
         <div className="space-y-6">
           <Step n={1} title="Download the template and fill it in">
             <Button
@@ -137,7 +128,5 @@ export function UploadCard({ onUploaded }: UploadCardProps) {
             </Button>
           </Step>
         </div>
-      </FieldGroup>
-    </Card>
   );
 }

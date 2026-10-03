@@ -6,6 +6,7 @@ import { toast } from "@/shared/components/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 
 import { useConsignmentPermissions } from "../_hooks/use-consignment-permissions";
+import { BULK_UPLOAD_URL_KEYS } from "../_lib/bulk-upload-params";
 import type { BulkUploadResult } from "../services/bulk-upload.service";
 import { BulkUploadTab } from "./bulk-upload/bulk-upload-tab";
 import { DeletedRequestsView } from "./deleted-requests-view";
@@ -44,9 +45,13 @@ export function RequestsLanding() {
     const query = new URLSearchParams(searchParams.toString());
     if (next === DELETED || next === BULK_UPLOAD) query.set("tab", next);
     else query.delete("tab");
-    // `?batch=` only means something on the Bulk Upload tab.
+    // `?batch=` and the uploads list's `bu_*` keys only mean something on the
+    // Bulk Upload tab.
     if (next === BULK_UPLOAD && batch) query.set("batch", batch);
-    else if (next !== BULK_UPLOAD) query.delete("batch");
+    else if (next !== BULK_UPLOAD) {
+      query.delete("batch");
+      for (const key of BULK_UPLOAD_URL_KEYS) query.delete(key);
+    }
     const qs = query.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }

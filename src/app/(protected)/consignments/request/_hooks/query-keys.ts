@@ -81,4 +81,9 @@ export const consignmentRequestKeys = {
     [...consignmentRequestKeys.bulkUpload(batchCode), "status"] as const,
   bulkUploadRows: (batchCode: string, params: { perPage: number }) =>
     [...consignmentRequestKeys.bulkUpload(batchCode), "rows", params] as const,
+
+  /** The uploads list — every page/filter combination sits under `bulkUploadLists`. */
+  bulkUploadLists: () => [...consignmentRequestKeys.all, "bulk-uploads"] as const,
+  bulkUploadList: (params: Record<string, string | number>) =>
+    [...consignmentRequestKeys.bulkUploadLists(), params] as const,
 } as const;
