@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PARTY_ADDRESS_TYPES, YES_NO } from "./types";
+import { YES_NO } from "./types";
 import { COORD_DECIMALS, truncateDecimals } from "@/shared/lib/number-input";
 
 /**
@@ -65,8 +65,8 @@ export const senderSchema = z.object({
   sender_phone: z.string().min(1, "Phone is required"),
   sender_telephone: z.string().optional(),
   sender_telephone_ext: z.string().optional(),
-  sender_is_resident: z.enum(YES_NO),
-  sender_address_type: z.enum(PARTY_ADDRESS_TYPES),
+  // Any key `/meta` publishes for `customer_address_type`.
+  sender_address_type: z.string().min(1, "Address type is required"),
 });
 
 export const receiverSchema = z.object({
@@ -84,8 +84,7 @@ export const receiverSchema = z.object({
   receiver_phone: z.string().min(1, "Phone is required"),
   receiver_telephone: z.string().optional(),
   receiver_telephone_ext: z.string().optional(),
-  receiver_is_resident: z.enum(YES_NO),
-  receiver_address_type: z.enum(PARTY_ADDRESS_TYPES),
+  receiver_address_type: z.string().min(1, "Address type is required"),
   /** Derived from the chosen city; editable. */
   receiver_latitude: optionalCoordinate,
   receiver_longitude: optionalCoordinate,
@@ -251,8 +250,9 @@ export const senderDefaults: ConsignmentAdminFormValues["sender"] = {
   sender_phone: "",
   sender_telephone: "",
   sender_telephone_ext: "",
-  sender_is_resident: "Y",
-  sender_address_type: "RESIDENT",
+  // Filled from `/meta`'s `customer_address_type` default by AddressFields
+  // once meta answers — never a hardcoded type.
+  sender_address_type: "",
 };
 
 /** The receiver's country comes from the rate check, so it starts blank. */
@@ -271,8 +271,7 @@ export const receiverDefaults: ConsignmentAdminFormValues["receiver"] = {
   receiver_phone: "",
   receiver_telephone: "",
   receiver_telephone_ext: "",
-  receiver_is_resident: "Y",
-  receiver_address_type: "RESIDENT",
+  receiver_address_type: "",
   receiver_latitude: undefined,
   receiver_longitude: undefined,
 };

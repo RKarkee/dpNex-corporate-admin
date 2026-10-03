@@ -17,6 +17,8 @@ export interface MetaOption {
 
 export interface MetaControl {
   values: MetaOption[];
+  /** The key the API suggests pre-selecting, where it publishes one. */
+  default?: string;
 }
 
 export interface MetaPayload {

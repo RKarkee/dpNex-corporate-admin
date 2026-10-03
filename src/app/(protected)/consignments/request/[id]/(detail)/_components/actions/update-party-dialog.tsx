@@ -69,7 +69,6 @@ const PARTY_KEYS = [
   "phone",
   "telephone",
   "telephone_ext",
-  "is_resident",
   "address_type",
   "latitude",
   "longitude",

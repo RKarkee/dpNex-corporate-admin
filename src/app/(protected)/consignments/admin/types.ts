@@ -28,21 +28,12 @@ export const YES_NO_OPTIONS = [
   { value: "N", label: "No" },
 ] as const;
 
-export const PARTY_ADDRESS_TYPES = [
-  "REGISTERED",
-  "PERMANENT",
-  "CURRENT",
-  "MAILING",
-  "BILLING",
-  "WORK",
-  "RESIDENT",
-] as const;
-export type PartyAddressType = (typeof PARTY_ADDRESS_TYPES)[number];
-
-export const PARTY_ADDRESS_TYPE_OPTIONS = PARTY_ADDRESS_TYPES.map((type) => ({
-  value: type,
-  label: `${type.charAt(0)}${type.slice(1).toLowerCase()}`,
-}));
+/**
+ * A party's address type (REGISTERED, RESIDENT, …). The vocabulary is the
+ * `customer_address_type` meta control's, not a list kept here — so a type the
+ * API adds is usable without a deploy. Replaces the old Y/N `is_resident`.
+ */
+export type PartyAddressType = string;
 
 /** Sourced from the `consignment_urgency` meta control, not a fixed list. */
 export type UrgencyLevel = string;
@@ -68,6 +59,22 @@ export interface CheckRatesPayload {
   total_weight: number;
   /** From `/meta` `rate_check_item_types`; only sent once the user picks one. */
   item_type?: string;
+  /** Optional delivery address lines — only sent when filled in. */
+  receiver_address_1?: string;
+  receiver_address_2?: string;
+  /** Every box being priced; `total_weight` is their summed weight. */
+  boxes: QuotedBox[];
+}
+
+/**
+ * One box as priced on the rate-check step. Carried to the create step so the
+ * form starts with the boxes the chosen quote was calculated for.
+ */
+export interface QuotedBox {
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
 }
 
 export interface SurchargeDetail {
@@ -125,7 +132,6 @@ export interface ConsignmentSender {
   sender_phone: string;
   sender_telephone?: string;
   sender_telephone_ext?: string;
-  sender_is_resident: YesNo;
   sender_address_type: PartyAddressType;
 }
 
@@ -144,7 +150,6 @@ export interface ConsignmentReceiver {
   receiver_phone: string;
   receiver_telephone?: string;
   receiver_telephone_ext?: string;
-  receiver_is_resident: YesNo;
   receiver_address_type: PartyAddressType;
   receiver_latitude?: number;
   receiver_longitude?: number;

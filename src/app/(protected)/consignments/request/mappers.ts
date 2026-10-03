@@ -6,7 +6,6 @@ import type {
   ConsignmentBoxDetail,
   ConsignmentRequestDetail,
   CreateConsignmentRequestPayload,
-  PartyAddressType,
   RateOption,
   ReceiverInfo,
   SenderInfo,
@@ -98,7 +97,6 @@ export function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInf
     sender_phone: sender.phone,
     sender_telephone: optional(sender.telephone),
     sender_telephone_ext: optional(sender.telephone_ext),
-    sender_is_resident: sender.is_resident,
     sender_address_type: sender.address_type,
   };
 }
@@ -122,7 +120,6 @@ export function toReceiverInfo(
     receiver_phone: receiver.phone,
     receiver_telephone: optional(receiver.telephone),
     receiver_telephone_ext: optional(receiver.telephone_ext),
-    receiver_is_resident: receiver.is_resident,
     receiver_address_type: receiver.address_type,
     receiver_latitude: receiver.latitude,
     receiver_longitude: receiver.longitude,
@@ -313,9 +310,8 @@ export function mapDetailToFormValues(
       phone: str(sender.sender_phone),
       telephone: str(sender.sender_telephone),
       telephone_ext: str(sender.sender_telephone_ext),
-      is_resident: toYesNo(sender.sender_is_resident, "Y"),
-      address_type: (str(sender.sender_address_type) ||
-        "RESIDENT") as PartyAddressType,
+      // Blank when the record has none — AddressFields then fills in meta's default.
+      address_type: str(sender.sender_address_type),
     },
 
     receiver: {
@@ -333,9 +329,7 @@ export function mapDetailToFormValues(
       phone: str(receiver.receiver_phone),
       telephone: str(receiver.receiver_telephone),
       telephone_ext: str(receiver.receiver_telephone_ext),
-      is_resident: toYesNo(receiver.receiver_is_resident, "Y"),
-      address_type: (str(receiver.receiver_address_type) ||
-        "RESIDENT") as PartyAddressType,
+      address_type: str(receiver.receiver_address_type),
       latitude: toCoordinate(receiver.receiver_latitude),
       longitude: toCoordinate(receiver.receiver_longitude),
     },

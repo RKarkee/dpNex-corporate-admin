@@ -10,9 +10,9 @@ import {
 
 import { Input } from "@/shared/components/ui/input";
 import { NativeSelect } from "@/shared/components/ui/native-select";
+import { useMetaOptions } from "@/shared/hooks/use-meta-options";
 
 import type { ConsignmentAdminFormInput } from "../schema";
-import { PARTY_ADDRESS_TYPE_OPTIONS, YES_NO_OPTIONS } from "../types";
 import { FieldShell } from "./field-shell";
 import type {
   AdminControl,
@@ -85,6 +85,34 @@ export function AddressFields({
   const cityValue = useWatch({ control, name: path("city") }) as
     | string
     | undefined;
+
+  // Address type — options and default both come from `/meta`
+  // (`customer_address_type`).
+  const { addressTypeOptions, addressTypeDefault } = useMetaOptions();
+  const addressTypeValue = useWatch({ control, name: path("address_type") }) as
+    | string
+    | undefined;
+
+  // A stored type `/meta` no longer lists stays selectable, so an older record
+  // does not open with a blank select.
+  const addressTypeSelectOptions = React.useMemo(
+    () =>
+      addressTypeValue &&
+      !addressTypeOptions.some((option) => option.value === addressTypeValue)
+        ? [...addressTypeOptions, { value: addressTypeValue, label: addressTypeValue }]
+        : addressTypeOptions,
+    [addressTypeOptions, addressTypeValue],
+  );
+
+  // Meta answers after mount, so its default lands here — only into an empty
+  // field: a stored type (edit) or the user's own pick always wins. Living in
+  // this component covers every mount: create, edit and the Update Party dialog.
+  React.useEffect(() => {
+    if (addressTypeDefault && !addressTypeValue) {
+      setValue(path("address_type"), addressTypeDefault);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressTypeDefault, addressTypeValue]);
 
   /**
    * Fills in latitude and longitude from the chosen location.
@@ -287,38 +315,22 @@ export function AddressFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Address type" required>
-        {({ id }) => (
+      <FieldShell
+        label="Address type"
+        required
+        error={errorFor("address_type")}
+      >
+        {({ id, describedBy }) => (
           <Controller
             control={control}
             name={path("address_type")}
             render={({ field }) => (
               <NativeSelect
                 id={id}
-                options={PARTY_ADDRESS_TYPE_OPTIONS}
-                value={String(field.value ?? "")}
-                onChange={(event) => field.onChange(event.target.value)}
-                onBlur={field.onBlur}
-              />
-            )}
-          />
-        )}
-      </FieldShell>
-
-      <FieldShell
-        label="Residential address"
-        required
-        hint="Carriers price residential deliveries differently"
-      >
-        {({ id, describedBy }) => (
-          <Controller
-            control={control}
-            name={path("is_resident")}
-            render={({ field }) => (
-              <NativeSelect
-                id={id}
                 aria-describedby={describedBy}
-                options={YES_NO_OPTIONS}
+                aria-invalid={errorFor("address_type") ? true : undefined}
+                options={addressTypeSelectOptions}
+                placeholder="Select address type"
                 value={String(field.value ?? "")}
                 onChange={(event) => field.onChange(event.target.value)}
                 onBlur={field.onBlur}

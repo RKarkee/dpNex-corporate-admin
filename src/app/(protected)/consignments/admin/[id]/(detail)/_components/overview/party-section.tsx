@@ -5,7 +5,9 @@ import type * as React from "react";
 import { useStateOptions } from "@/shared/hooks/use-location-options";
 import type { LocationOption } from "@/shared/hooks/use-location-options";
 
-import { Field, Section, yesNo } from "../detail-primitives";
+import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
+
+import { Field, Section } from "../detail-primitives";
 
 /**
  * Sender or receiver — one component, mounted twice.
@@ -35,6 +37,7 @@ export function PartySection({
   const field = (key: string) => party[`${prefix}_${key}`];
 
   const { iso2ToName: stateNames } = useStateOptions(field("country"));
+  const { addressTypeOptions } = useMetaOptions();
 
   const countryName = (code?: string) =>
     code
@@ -65,7 +68,7 @@ export function PartySection({
       />
       <Field label="City" value={field("city")} />
       <Field label="ZIP" value={field("zip")} />
-      <Field label="Residential" value={yesNo(field("is_resident"))} />
+      <Field label="Address type" value={optionLabel(addressTypeOptions, field("address_type"))} />
       <Field
         label="Address"
         className="sm:col-span-2 lg:col-span-3"

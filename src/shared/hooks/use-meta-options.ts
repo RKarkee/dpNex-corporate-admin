@@ -56,6 +56,13 @@ export interface MetaOptions {
   urgencyOptions: ComboboxOption[];
   /** What is being shipped, for check-rates — `rate_check_item_types`. */
   rateCheckItemTypeOptions: ComboboxOption[];
+  /** A party's address type (REGISTERED, RESIDENT, …) — `customer_address_type`. */
+  addressTypeOptions: ComboboxOption[];
+  /**
+   * The API's suggested address type — its `default`, else the first option,
+   * else "" while meta is still loading.
+   */
+  addressTypeDefault: string;
   /** PENDING, APPROVED, REJECTED, CANCELLED — the approval-request lifecycle. */
   approvalStatusOptions: ComboboxOption[];
   /** Credit limit, discount, corporate info update, profile update. */
@@ -92,6 +99,11 @@ export function useMetaOptions(): MetaOptions {
       productTypeOptions: toOptions(controls.consignment_product_type?.values),
       urgencyOptions: toOptions(controls.consignment_urgency?.values),
       rateCheckItemTypeOptions: toOptions(controls.rate_check_item_types?.values),
+      addressTypeOptions: toOptions(controls.customer_address_type?.values),
+      addressTypeDefault:
+        controls.customer_address_type?.default ??
+        controls.customer_address_type?.values?.[0]?.key ??
+        "",
       approvalStatusOptions: toOptions(controls.approval_statuses?.values),
       approvalTypeOptions: toOptions(controls.approval_request_types?.values),
       ticketStatusOptions: toOptions(controls.support_ticket_statuses?.values),

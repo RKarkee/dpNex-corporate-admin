@@ -8,7 +8,6 @@ import type {
   ConsignmentReceiver,
   ConsignmentSender,
   CreateConsignmentPayload,
-  PartyAddressType,
   RateOption,
   UpdateConsignmentPayload,
   YesNo,
@@ -100,7 +99,6 @@ export function toSenderPayload(
     sender_phone: sender.sender_phone,
     sender_telephone: optional(sender.sender_telephone),
     sender_telephone_ext: optional(sender.sender_telephone_ext),
-    sender_is_resident: sender.sender_is_resident,
     sender_address_type: sender.sender_address_type,
   };
 }
@@ -124,7 +122,6 @@ export function toReceiverPayload(
     receiver_phone: receiver.receiver_phone,
     receiver_telephone: optional(receiver.receiver_telephone),
     receiver_telephone_ext: optional(receiver.receiver_telephone_ext),
-    receiver_is_resident: receiver.receiver_is_resident,
     receiver_address_type: receiver.receiver_address_type,
     receiver_latitude: receiver.receiver_latitude,
     receiver_longitude: receiver.receiver_longitude,
@@ -317,9 +314,8 @@ export function mapDetailToFormValues(
       sender_phone: str(sender.sender_phone),
       sender_telephone: str(sender.sender_telephone),
       sender_telephone_ext: str(sender.sender_telephone_ext),
-      sender_is_resident: toYesNo(sender.sender_is_resident, "Y"),
-      sender_address_type: (str(sender.sender_address_type) ||
-        "RESIDENT") as PartyAddressType,
+      // Blank when the record has none — AddressFields then fills in meta's default.
+      sender_address_type: str(sender.sender_address_type),
     },
 
     receiver: {
@@ -337,9 +333,7 @@ export function mapDetailToFormValues(
       receiver_phone: str(receiver.receiver_phone),
       receiver_telephone: str(receiver.receiver_telephone),
       receiver_telephone_ext: str(receiver.receiver_telephone_ext),
-      receiver_is_resident: toYesNo(receiver.receiver_is_resident, "Y"),
-      receiver_address_type: (str(receiver.receiver_address_type) ||
-        "RESIDENT") as PartyAddressType,
+      receiver_address_type: str(receiver.receiver_address_type),
       receiver_latitude: toCoordinate(receiver.receiver_latitude),
       receiver_longitude: toCoordinate(receiver.receiver_longitude),
     },

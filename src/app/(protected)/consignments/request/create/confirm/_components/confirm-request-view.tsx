@@ -17,7 +17,7 @@ import {
   senderDefaults,
   type ConsignmentFormValues,
 } from "../../../schema";
-import type { RateOption } from "../../../types";
+import type { QuotedBox, RateOption } from "../../../types";
 
 /**
  * Step two of creating a request: the full consignment, against a chosen rate.
@@ -54,6 +54,28 @@ function parseRate(raw: string | null): RateOption | null {
   }
 }
 
+/**
+ * The boxes the quote was priced on, or `[]` when the parameter is missing,
+ * malformed or from an older link. Anything that is not a positive number in
+ * every measure is dropped rather than half-filled into the form.
+ */
+function parseQuotedBoxes(raw: string | null): QuotedBox[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((box) => {
+      const measures = ["weight", "length", "width", "height"] as const;
+      const values = measures.map((key) => Number((box as Record<string, unknown>)?.[key]));
+      if (!values.every((n) => Number.isFinite(n) && n > 0)) return [];
+      const [weight, length, width, height] = values as [number, number, number, number];
+      return [{ weight, length, width, height }];
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** Today, as the `yyyy-mm-dd` a date input expects. */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -66,6 +88,10 @@ export function ConfirmRequestView() {
   const rate = React.useMemo(() => parseRate(params.get("rate")), [params]);
   const packageType = params.get("package_type") ?? "";
   const packageTypeLabel = params.get("package_type_label") ?? "";
+  const quotedBoxes = React.useMemo(
+    () => parseQuotedBoxes(params.get("boxes")),
+    [params],
+  );
 
   const defaultValues = React.useMemo<ConsignmentFormValues>(
     () => ({
@@ -78,8 +104,20 @@ export function ConfirmRequestView() {
         state_name: params.get("receiver_state_name") ?? "",
         city: params.get("receiver_city") ?? "",
         zip: params.get("receiver_zip") ?? "",
+        address_1: params.get("receiver_address_1") ?? "",
+        address_2: params.get("receiver_address_2") ?? "",
       },
-      boxes: [{ ...newBoxDefaults }],
+      // The boxes priced on the rate-check step — weight and dimensions; the
+      // rest of each box starts as a fresh one. One blank box for older links.
+      boxes:
+        quotedBoxes.length > 0
+          ? quotedBoxes.map((box, index) => ({
+              ...newBoxDefaults,
+              items: newBoxDefaults.items.map((item) => ({ ...item })),
+              box_no: index + 1,
+              ...box,
+            }))
+          : [{ ...newBoxDefaults }],
 
       ship_date: today(),
       need_pickup: "N",
@@ -105,7 +143,7 @@ export function ConfirmRequestView() {
 
       send_updates: "Y",
     }),
-    [params],
+    [params, quotedBoxes],
   );
 
   // Reached by a direct link, a stale bookmark, or a back-navigation after the
@@ -153,6 +191,7 @@ export function ConfirmRequestView() {
           packageType,
         }}
         error={createRequest.error}
+        quotedBoxes={quotedBoxes.length > 0 ? quotedBoxes : undefined}
       />
     </div>
   );

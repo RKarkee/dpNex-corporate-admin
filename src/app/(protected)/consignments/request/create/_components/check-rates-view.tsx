@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, PackageSearch, Search } from "lucide-react";
 
 import { AsyncCombobox } from "@/shared/components/ui/async-combobox";
@@ -13,7 +12,6 @@ import { Card } from "@/shared/components/ui/card";
 import { Combobox } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
-import { blockSignInputProps } from "@/shared/lib/number-input";
 
 import { useCheckRates } from "../../_hooks/use-check-rates";
 import { FieldGroup, FieldShell } from "../../_components/field-shell";
@@ -21,6 +19,14 @@ import { LocationFields } from "../../_components/location-fields";
 import { packageTypeFetcher } from "../../_components/lookup-fetchers";
 import { RateOptionCard } from "../../_components/rate-cards";
 import type { RateOption } from "../../types";
+import {
+  checkRatesSchema,
+  newRateCheckBox,
+  sumBoxWeights,
+  type CheckRatesFormInput,
+  type CheckRatesFormValues,
+} from "./check-rates-schema";
+import { RateCheckBoxes } from "./rate-check-boxes";
 
 /**
  * Step one of creating a request: price the destination, then pick a rate.
@@ -35,27 +41,6 @@ import type { RateOption } from "../../types";
  * module-level variable or a context would not — and losing a chosen quote
  * halfway through a long form is worse than a long URL.
  */
-
-const checkRatesSchema = z.object({
-  receiver_country: z.string().min(1, "Country is required"),
-  receiver_state: z.string().min(1, "State is required"),
-  receiver_state_name: z.string().optional(),
-  receiver_city: z.string().min(1, "City is required"),
-  receiver_zip: z.string().min(1, "ZIP / postal code is required"),
-  package_type: z.string().min(1, "Package type is required"),
-  total_weight: z.coerce.number().positive("Weight must be greater than 0"),
-  // Optional, and deliberately not pre-selected: `/meta` publishes a default,
-  // but the user has to choose what they are shipping themselves.
-  item_type: z.string().optional(),
-});
-
-/**
- * `total_weight` is coerced, so the form holds a string where the validated
- * result holds a number — hence two types rather than one. See the note in
- * `schema.ts`.
- */
-type CheckRatesFormInput = z.input<typeof checkRatesSchema>;
-type CheckRatesFormValues = z.output<typeof checkRatesSchema>;
 
 export function CheckRatesView() {
   const router = useRouter();
@@ -81,10 +66,18 @@ export function CheckRatesView() {
       receiver_state_name: "",
       receiver_city: "",
       receiver_zip: "",
+      receiver_address_1: "",
+      receiver_address_2: "",
       package_type: "",
       item_type: "",
+      boxes: [{ ...newRateCheckBox }],
     },
   });
+
+  // Total weight is the boxes' summed weight — shown read-only, never typed,
+  // so it cannot disagree with the boxes it is sent alongside.
+  const watchedBoxes = useWatch({ control, name: "boxes" });
+  const totalWeight = sumBoxWeights(watchedBoxes);
 
   const country = watch("receiver_country");
   const state = watch("receiver_state");
@@ -93,11 +86,18 @@ export function CheckRatesView() {
   const { rateCheckItemTypeOptions } = useMetaOptions();
 
   const onSubmit = (values: CheckRatesFormValues) => {
-    const { item_type, ...rest } = values;
+    const { item_type, receiver_address_1, receiver_address_2, boxes, ...rest } = values;
+    const address1 = receiver_address_1?.trim();
+    const address2 = receiver_address_2?.trim();
     checkRates.mutate({
       ...rest,
       receiver_state_name: values.receiver_state_name ?? "",
-      // Left out entirely until chosen, so a blank never reaches validation.
+      total_weight: sumBoxWeights(boxes),
+      boxes,
+      // Optional lines and the item type are left out entirely until filled,
+      // so a blank never reaches validation.
+      ...(address1 ? { receiver_address_1: address1 } : {}),
+      ...(address2 ? { receiver_address_2: address2 } : {}),
       ...(item_type ? { item_type } : {}),
     });
   };
@@ -111,8 +111,13 @@ export function CheckRatesView() {
       receiver_state_name: values.receiver_state_name ?? "",
       receiver_city: values.receiver_city,
       receiver_zip: values.receiver_zip,
+      receiver_address_1: values.receiver_address_1?.trim() ?? "",
+      receiver_address_2: values.receiver_address_2?.trim() ?? "",
       package_type: values.package_type,
       package_type_label: packageTypeLabel,
+      // The boxes these rates were priced on — the mutation's own input, not
+      // the box inputs as they are now, which may have been edited since.
+      boxes: JSON.stringify(checkRates.variables?.boxes ?? []),
     });
 
     router.push(`/consignments/request/create/confirm?${params.toString()}`);
@@ -124,7 +129,7 @@ export function CheckRatesView() {
         <Card className="p-6 sm:p-8">
           <FieldGroup
             title="Check rates"
-            description="Where is this going, and how much does it weigh?"
+            description="Where is this going, and what are you sending?"
             icon={PackageSearch}
           >
             <LocationFields
@@ -162,6 +167,28 @@ export function CheckRatesView() {
                   aria-describedby={describedBy}
                   aria-invalid={errors.receiver_zip ? true : undefined}
                   {...register("receiver_zip")}
+                />
+              )}
+            </FieldShell>
+
+            <FieldShell label="Address line 1" error={errors.receiver_address_1?.message}>
+              {({ id, describedBy }) => (
+                <Input
+                  id={id}
+                  placeholder="Street address (optional)"
+                  aria-describedby={describedBy}
+                  {...register("receiver_address_1")}
+                />
+              )}
+            </FieldShell>
+
+            <FieldShell label="Address line 2" error={errors.receiver_address_2?.message}>
+              {({ id, describedBy }) => (
+                <Input
+                  id={id}
+                  placeholder="Apartment, suite, etc. (optional)"
+                  aria-describedby={describedBy}
+                  {...register("receiver_address_2")}
                 />
               )}
             </FieldShell>
@@ -213,26 +240,22 @@ export function CheckRatesView() {
               )}
             </FieldShell>
 
-            <FieldShell
-              label="Total weight (kg)"
-              required
-              error={errors.total_weight?.message}
-              hint="The combined weight of every box"
-            >
+            <FieldShell label="Total weight (kg)" hint="The sum of the box weights">
               {({ id, describedBy }) => (
                 <Input
                   id={id}
                   type="number"
-                  step="0.01"
-                  min="0"
-                  {...blockSignInputProps}
-                  placeholder="20"
+                  value={totalWeight || ""}
+                  readOnly
+                  tabIndex={-1}
+                  placeholder="0"
                   aria-describedby={describedBy}
-                  aria-invalid={errors.total_weight ? true : undefined}
-                  {...register("total_weight")}
+                  className="cursor-not-allowed bg-muted focus-visible:ring-0"
                 />
               )}
             </FieldShell>
+
+            <RateCheckBoxes control={control} register={register} errors={errors} />
           </FieldGroup>
 
           <div className="mt-6 flex justify-end">
@@ -260,9 +283,11 @@ export function CheckRatesView() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {rates.map((rate) => (
+            {/* Keyed by position: several quotes can share one customer_rate_id
+                (same customer rate, different carrier or service). */}
+            {rates.map((rate, index) => (
               <RateOptionCard
-                key={rate.customer_rate_id}
+                key={`${index}-${rate.customer_rate_id}-${rate.integrator_code}-${rate.service_code}`}
                 rate={rate}
                 onSelect={handleSelect}
               />

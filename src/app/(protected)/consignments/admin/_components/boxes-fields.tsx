@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Controller, useFieldArray, useWatch } from "react-hook-form";
-import { Boxes, Package, Plus, Trash2 } from "lucide-react";
+import { Boxes, Package, Plus, Trash2, TriangleAlert } from "lucide-react";
 
 import { AsyncCombobox } from "@/shared/components/ui/async-combobox";
 import { Button } from "@/shared/components/ui/button";
@@ -15,7 +15,7 @@ import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-
 import { cn } from "@/shared/lib/utils";
 
 import { useCheckWeightDimension } from "../_hooks/use-check-weight-dimension";
-import type { ShipmentRouting, WeightDimensionCheckResult } from "../types";
+import type { QuotedBox, ShipmentRouting, WeightDimensionCheckResult } from "../types";
 
 import { newBoxDefaults, newItemDefaults } from "../schema";
 import { FieldGroup, FieldShell } from "./field-shell";
@@ -103,6 +103,49 @@ export interface BoxesFieldsProps {
   routing: ShipmentRouting;
   /** The receiver's current address — for the weight check. */
   receiver: ReceiverAddress;
+  /**
+   * Create only: the boxes the chosen quote was priced on. Their weight check
+   * runs on mount, and a warning shows once the boxes stop matching.
+   */
+  quotedBoxes?: QuotedBox[];
+}
+
+const QUOTED_MEASURES = ["weight", "length", "width", "height"] as const;
+
+/**
+ * Shown when the boxes no longer match the ones the quote was priced on — a
+ * different count, or any weight / length / width / height changed. Warns
+ * only: small corrections at this step are normal.
+ */
+function QuotedBoxesNotice({
+  control,
+  quotedBoxes,
+}: {
+  control: AdminControl;
+  quotedBoxes: QuotedBox[];
+}) {
+  const boxes = useWatch({ control, name: "boxes" }) ?? [];
+  const changed =
+    boxes.length !== quotedBoxes.length ||
+    boxes.some((box, index) =>
+      QUOTED_MEASURES.some(
+        (key) => Number(box?.[key]) !== Number(quotedBoxes[index]?.[key]),
+      ),
+    );
+  if (!changed) return null;
+
+  return (
+    <div
+      role="status"
+      className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
+    >
+      <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <span>
+        Boxes changed since rates were checked — the selected rate may no longer
+        apply. Check rates again if the change is significant.
+      </span>
+    </div>
+  );
 }
 
 export function BoxesFields({
@@ -112,6 +155,7 @@ export function BoxesFields({
   errors,
   routing,
   receiver,
+  quotedBoxes,
 }: BoxesFieldsProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "boxes" });
   const { quantityCodeOptions, genderOptions } = useMetaOptions();
@@ -145,6 +189,10 @@ export function BoxesFields({
           </p>
         ) : null}
 
+        {quotedBoxes ? (
+          <QuotedBoxesNotice control={control} quotedBoxes={quotedBoxes} />
+        ) : null}
+
         {fields.map((field, index) => (
           <BoxRow
             key={field.id}
@@ -160,6 +208,9 @@ export function BoxesFields({
             onRemove={() => remove(index)}
             // The schema requires one, so the last box cannot be removed.
             canRemove={fields.length > 1}
+            // Boxes carried from the quote are checked straight away; on edit
+            // (no quote) a check still waits for the user's first change.
+            autoCheckOnMount={Boolean(quotedBoxes)}
           />
         ))}
       </FieldGroup>
@@ -183,6 +234,8 @@ interface BoxRowProps {
   canRemove: boolean;
   routing: ShipmentRouting;
   receiver: ReceiverAddress;
+  /** Read once, at mount — arms the weight check without a user edit. */
+  autoCheckOnMount?: boolean;
 }
 
 function BoxRow({
@@ -197,6 +250,7 @@ function BoxRow({
   canRemove,
   routing,
   receiver,
+  autoCheckOnMount = false,
 }: BoxRowProps) {
   const boxErrors = errors.boxes?.[index];
 
@@ -208,8 +262,11 @@ function BoxRow({
     name: `boxes.${index}.declared_currency_label`,
   });
 
-  // Weight / dimension check. Fires only after the user edits this box's
-  // weight, length, width or height — never when a record is loaded for edit.
+  // Weight / dimension check. Fires after the user edits this box's weight,
+  // length, width or height — never when a record is loaded for edit. Boxes
+  // carried over from the rate check (`autoCheckOnMount`) are armed from the
+  // start, so their volumetric weight and any flags show without a keystroke;
+  // re-checks still follow only this box's own measures.
   const boxNo = useWatch({ control, name: `boxes.${index}.box_no` });
   const weight = useWatch({ control, name: `boxes.${index}.weight` });
   const length = useWatch({ control, name: `boxes.${index}.length` });
@@ -218,7 +275,7 @@ function BoxRow({
   const volumetric = useWatch({ control, name: `boxes.${index}.volumetric_weight` });
   const quantityCode = useWatch({ control, name: `boxes.${index}.quantity_code` });
 
-  const [dimensionsTouched, setDimensionsTouched] = React.useState(false);
+  const [dimensionsTouched, setDimensionsTouched] = React.useState(autoCheckOnMount);
   const [applied, setApplied] = React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
   const { validWeight, flags } = applied;
   const setFlags = (update: (current: WeightCheckFlags) => WeightCheckFlags) =>

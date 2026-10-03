@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PARTY_ADDRESS_TYPES, YES_NO } from "./types";
+import { YES_NO } from "./types";
 import { COORD_DECIMALS, truncateDecimals } from "@/shared/lib/number-input";
 
 /**
@@ -60,8 +60,8 @@ const partySchema = z.object({
   phone: z.string().min(1, "Phone is required"),
   telephone: z.string().optional(),
   telephone_ext: z.string().optional(),
-  is_resident: z.enum(YES_NO),
-  address_type: z.enum(PARTY_ADDRESS_TYPES),
+  // Any key `/meta` publishes for `customer_address_type`.
+  address_type: z.string().min(1, "Address type is required"),
 });
 
 /** Exported for the Update Sender dialog, which validates one party on its own. */
@@ -233,8 +233,9 @@ export const senderDefaults: ConsignmentFormValues["sender"] = {
   phone: "",
   telephone: "",
   telephone_ext: "",
-  is_resident: "Y",
-  address_type: "RESIDENT",
+  // Filled from `/meta`'s `customer_address_type` default by AddressFields
+  // once meta answers — never a hardcoded type.
+  address_type: "",
 };
 
 /** The receiver's country comes from the rate check, so it starts blank. */

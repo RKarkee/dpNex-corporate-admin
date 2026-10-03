@@ -16,7 +16,7 @@ import {
   type ConsignmentAdminFormValues,
 } from "../schema";
 import { useCheckRemoteAddress } from "../_hooks/use-check-remote-address";
-import type { ShipmentRouting } from "../types";
+import type { QuotedBox, ShipmentRouting } from "../types";
 import { AddressFields } from "./address-fields";
 import { BoxesFields } from "./boxes-fields";
 import { FieldGroup } from "./field-shell";
@@ -58,6 +58,11 @@ export interface ConsignmentFormProps {
   routing: ShipmentRouting;
   /** The failed mutation — anything not a 422 is summarised above the buttons. */
   error?: unknown;
+  /**
+   * Create only: the boxes the chosen quote was priced on. Their weight check
+   * runs straight away, and the form warns once the boxes stop matching.
+   */
+  quotedBoxes?: QuotedBox[];
 }
 
 export function ConsignmentForm({
@@ -69,6 +74,7 @@ export function ConsignmentForm({
   cancelHref,
   routing,
   error,
+  quotedBoxes,
 }: ConsignmentFormProps) {
   const {
     register,
@@ -175,6 +181,7 @@ export function ConsignmentForm({
         setValue={setValue}
         errors={errors}
         routing={routing}
+        quotedBoxes={quotedBoxes}
         receiver={{
           country: receiverCountry,
           state: receiverState,

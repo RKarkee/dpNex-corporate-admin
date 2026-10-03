@@ -40,8 +40,23 @@ export const materialFetcher = async (page: number, query: string) =>
 export const hsCodeFetcher = async (page: number, query: string) =>
   toPage(await fetchHsCodes(page, PER_PAGE, query || undefined));
 
-export const currencyFetcher = async (page: number, query: string) =>
-  toPage(await fetchCurrencies(page, PER_PAGE, query || undefined));
+/**
+ * Currencies read as "USD - United States Dollar": the row's `value` is the
+ * code, its `label` the name. The code stays the stored value.
+ */
+export const currencyFetcher = async (page: number, query: string) => {
+  const result = toPage(await fetchCurrencies(page, PER_PAGE, query || undefined));
+  return {
+    ...result,
+    options: result.options.map((option) => ({
+      ...option,
+      label:
+        option.label && option.label !== option.value
+          ? `${option.value} - ${option.label}`
+          : option.value,
+    })),
+  };
+};
 
 export const manufacturerFetcher = async (page: number, query: string) =>
   toPage(await fetchManufacturers(page, PER_PAGE, query || undefined));
