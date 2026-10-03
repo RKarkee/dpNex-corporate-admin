@@ -10,6 +10,7 @@ import { routes, siteConfig } from "@/shared/config/site";
 import { AttentionMenu } from "../notifications/_components/attention-menu";
 import { NotificationBell } from "../notifications/_components/notification-bell";
 import { useSidebarStore } from "../_store/sidebar-store";
+import { CreditHeaderWidget } from "./credit-header-widget";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -62,6 +63,7 @@ export function Header() {
         and they stay separate because one badge cannot mean both.
       */}
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <CreditHeaderWidget />
         <AttentionMenu />
         <NotificationBell />
         <UserMenu />

@@ -84,6 +84,7 @@ export function ProfileHeader({
 
   // Nested in the profile payload, and also on the session — either will do.
   const corporate = profile?.corporate ?? user.corporate ?? null;
+  
 
   return (
     <Card className="p-4 sm:p-6">
@@ -114,17 +115,23 @@ export function ProfileHeader({
                   corporate.name}
               </span>
               <span aria-hidden>·</span>
-              <span>{corporate.corp_code}</span>
+              <span style={{ fontWeight: 'bold' }}>{corporate.corp_code}</span>
               {corporate.pan ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span>PAN {corporate.pan}</span>
+                  <span style={{ fontWeight: 'bold' }}>PAN: {corporate.pan}</span>
                 </>
               ) : null}
               {corporate.vat ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span>VAT {corporate.vat}</span>
+                  <span style={{ fontWeight: 'bold' }}>VAT: {corporate.vat}</span>
+                </>
+              ) : null}
+              {profile?.cif_id ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span style={{ fontWeight: 'bold' }}>CIF ID: {profile?.cif_id}</span>
                 </>
               ) : null}
             </p>

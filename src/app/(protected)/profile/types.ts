@@ -8,6 +8,9 @@
  */
 
 import type { Corporate } from "@/shared/auth/types";
+import type { CustomerCredit } from "@/shared/billing/credit";
+
+export type { CustomerCredit };
 
 /** Where an address applies. The API stores the bare key. */
 export const ADDRESS_TYPES = [
@@ -86,6 +89,10 @@ export interface CustomerProfile {
   kyc_remarks?: string | null;
   /** The rolled-up status the header badge shows; absent until a document exists. */
   kyc_status?: KycStatus | null;
+  default_currency?: string | null;
+  credit_limit?: string | null;
+  available_credit?: string | null;
+  cif_id?: string | null;
 
   /**
    * The company, nested inside the customer record.
@@ -96,6 +103,9 @@ export interface CustomerProfile {
    * sources of the same entity from drifting.
    */
   corporate?: Corporate | null;
+
+  /** `null` when the payload carries no credit block at all. */
+  credit: CustomerCredit | null;
 
   addresses: Address[];
 }

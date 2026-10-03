@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from "@/shared/lib/dates";
+import { formatAmount } from "@/shared/lib/numbers";
 
 import {
   infoFieldLabel,
@@ -10,24 +11,12 @@ import {
  * Formatting for approval requests — amounts and the one-line summary of what
  * a request is actually asking for.
  *
- * The date helpers live in `shared/lib/dates` now that support tickets need the
- * same ones; they are re-exported here so this module stays the one import a
+ * The date and amount helpers live in `shared/lib` now that other slices need
+ * the same ones; they are re-exported here so this module stays the one import a
  * component in this slice needs.
  */
 
-export { formatDate, formatDateTime };
-
-/** Thousands separators, and nothing else — the API sends no currency with these. */
-export function formatAmount(value: unknown): string {
-  const amount = typeof value === "string" ? Number(value) : value;
-  if (typeof amount !== "number" || !Number.isFinite(amount)) {
-    return String(value ?? "—");
-  }
-
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
-    amount,
-  );
-}
+export { formatAmount, formatDate, formatDateTime };
 
 /**
  * A discount, as the reviewer needs to read it.

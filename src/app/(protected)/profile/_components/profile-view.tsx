@@ -17,6 +17,10 @@ import { useKycDocuments } from "../_hooks/use-kyc-documents";
 import { useProfile } from "../_hooks/use-profile";
 import type { ProfileRead } from "../services/profile.service";
 import type { KycStatus } from "../types";
+import {
+  CreditDetailsCard,
+  CreditDetailsCardSkeleton,
+} from "./credit-details-card";
 import { KycTab, KycTabSkeleton } from "./kyc-tab";
 import { ProfileHeader, ProfileHeaderSkeleton } from "./profile-header";
 import { ProfileInfoTab, ProfileInfoTabSkeleton } from "./profile-info-tab";
@@ -58,6 +62,12 @@ export function ProfileView() {
           kycStatus={kycStatus}
         />
       )}
+
+      {profileQuery.isLoading ? (
+        <CreditDetailsCardSkeleton />
+      ) : profile?.credit ? (
+        <CreditDetailsCard credit={profile.credit} />
+      ) : null}
 
       <Tabs defaultValue="profile" className="flex flex-col gap-4 sm:gap-5">
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">

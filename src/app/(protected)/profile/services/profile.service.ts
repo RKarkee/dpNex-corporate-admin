@@ -2,6 +2,7 @@ import { ApiError } from "@/shared/api/errors";
 import type { MutationResult } from "@/shared/api/http/create-client";
 import { privateApiClient } from "@/shared/api/private-client";
 import { IS_DEV } from "@/shared/config/env";
+import { readCredit } from "@/shared/billing/credit";
 
 import type { Address, CustomerProfile } from "../types";
 import { isAddressType, isKycStatus } from "../types";
@@ -145,12 +146,18 @@ function normalizeProfile(record: Record<string, unknown>): CustomerProfile {
     remarks: optionalStr(record.remarks),
     kyc_remarks: optionalStr(record.kyc_remarks),
     kyc_status: isKycStatus(record.kyc_status) ? record.kyc_status : null,
+    default_currency: optionalStr(record.default_currency),
+    credit_limit: optionalStr(record.credit_limit),
+    available_credit: optionalStr(record.available_credit),
+    cif_id: optionalStr(record.cif_id),
     // Structurally the shared `Corporate`, whose every field past the first two
     // is optional — so a partial company block narrows cleanly rather than
     // needing its own reader.
     corporate: isRecord(record.corporate)
       ? (record.corporate as unknown as CustomerProfile["corporate"])
       : null,
+    // Nested block first, the record's flat copies as a fallback.
+    credit: readCredit(record.credit, record),
     // Always an array. A missing or null key is "no addresses", not a shape
     // failure — the record itself was recognised, so this stays tolerant.
     addresses: readAddresses(record.addresses),
