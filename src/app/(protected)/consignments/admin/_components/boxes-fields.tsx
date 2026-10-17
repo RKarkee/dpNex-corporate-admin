@@ -28,6 +28,7 @@ import type {
 import {
   currencyFetcher,
   hsCodeFetcher,
+  hsItemFetcher,
   manufacturerFetcher,
   materialFetcher,
 } from "./lookup-fetchers";
@@ -727,7 +728,8 @@ function BoxItemRow({
   const base = `boxes.${boxIndex}.items.${itemIndex}` as const;
   const itemErrors = errors.boxes?.[boxIndex]?.items?.[itemIndex];
 
-  const hsCodeLabel = useWatch({ control, name: `${base}.item_hs_code_label` });
+  const itemName = useWatch({ control, name: `${base}.item_name` });
+  const itemHsCode = useWatch({ control, name: `${base}.item_hs_code` });
   const materialLabel = useWatch({ control, name: `${base}.item_material_label` });
   const manufacturerLabel = useWatch({
     control,
@@ -775,36 +777,44 @@ function BoxItemRow({
           required
           error={itemErrors?.item_name?.message}
         >
-          {({ id, describedBy }) => (
-            <Input
-              id={id}
-              placeholder="iPhone 14 case"
-              aria-describedby={describedBy}
-              aria-invalid={itemErrors?.item_name ? true : undefined}
-              {...register(`${base}.item_name`)}
+          {() => (
+            // Search-as-you-type over the HS code list. Picking a row fills the
+            // name and the HS code together; free text is still accepted and
+            // leaves the code empty.
+            <Controller
+              control={control}
+              name={`${base}.item_name`}
+              render={({ field }) => (
+                <AsyncCombobox
+                  value={itemHsCode || field.value || ""}
+                  selectedLabel={itemName || undefined}
+                  onChange={(option) => {
+                    field.onChange(option.label);
+                    // Only rows from the list carry a hint; free text has no code.
+                    setValue(`${base}.item_hs_code`, option.hint ? option.value : "", {
+                      shouldDirty: true,
+                    });
+                  }}
+                  fetchPage={hsItemFetcher}
+                  placeholder="Search item name"
+                  searchPlaceholder="Search item name or HS code…"
+                  allowCustomValue
+                  aria-invalid={itemErrors?.item_name ? true : undefined}
+                />
+              )}
             />
           )}
         </FieldShell>
 
-        <FieldShell label="HS code">
-          {() => (
-            <Controller
-              control={control}
-              name={`${base}.item_hs_code`}
-              render={({ field }) => (
-                <AsyncCombobox
-                  value={field.value ?? ""}
-                  selectedLabel={hsCodeLabel}
-                  onChange={(option) => {
-                    field.onChange(option.value);
-                    setValue(`${base}.item_hs_code_label`, option.label);
-                  }}
-                  fetchPage={hsCodeFetcher}
-                  placeholder="Select or type an HS code"
-                  searchPlaceholder="Search HS codes…"
-                  allowCustomValue
-                />
-              )}
+        <FieldShell label="HS code" hint="Filled from the item">
+          {({ id }) => (
+            <Input
+              id={id}
+              value={itemHsCode ?? ""}
+              readOnly
+              tabIndex={-1}
+              placeholder="Filled from the item"
+              className="cursor-not-allowed text-muted-foreground focus-visible:ring-0"
             />
           )}
         </FieldShell>

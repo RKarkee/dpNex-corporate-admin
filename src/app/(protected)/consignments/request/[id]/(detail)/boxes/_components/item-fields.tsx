@@ -12,7 +12,7 @@ import type { ItemWritePayload } from "../../../../types";
 import { FieldShell } from "../../../../_components/field-shell";
 import {
   currencyFetcher,
-  hsCodeFetcher,
+  hsItemFetcher,
   manufacturerFetcher,
   materialFetcher,
 } from "../../../../_components/lookup-fetchers";
@@ -189,7 +189,6 @@ export function ItemFields({
    * These are hooks, so a list of items renders one `ItemFields` per row rather
    * than looping inside a single component.
    */
-  const resolvedHsCode = useLookupLabel("hsCode", value.item_hs_code);
   const resolvedMaterial = useLookupLabel("material", value.item_material);
   const resolvedManufacturer = useLookupLabel(
     "manufacturer",
@@ -221,35 +220,39 @@ export function ItemFields({
         error={error("item_name")}
         className="sm:col-span-2"
       >
-        {({ id, describedBy }) => (
-          <Input
-            id={id}
-            placeholder="iPhone 14 case"
-            value={value.item_name}
+        {() => (
+          // Search-as-you-type over the HS code list. Picking a row fills the
+          // name and the HS code together; free text is still accepted and
+          // leaves the code empty.
+          <AsyncCombobox
+            value={value.item_hs_code || value.item_name}
+            selectedLabel={value.item_name || undefined}
+            onChange={(option) =>
+              onChange({
+                item_name: option.label,
+                // Only rows from the list carry a hint; free text has no code.
+                item_hs_code: option.hint ? option.value : "",
+              })
+            }
+            fetchPage={hsItemFetcher}
+            placeholder="Search item name"
+            searchPlaceholder="Search item name or HS code…"
+            allowCustomValue
             disabled={disabled}
-            onChange={(event) => onChange({ item_name: event.target.value })}
-            aria-describedby={describedBy}
             aria-invalid={error("item_name") ? true : undefined}
           />
         )}
       </FieldShell>
 
-      <FieldShell label="HS code" hint="Optional">
-        {() => (
-          <AsyncCombobox
+      <FieldShell label="HS code" hint="Filled from the item">
+        {({ id }) => (
+          <Input
+            id={id}
             value={value.item_hs_code}
-            selectedLabel={value.item_hs_code_label || resolvedHsCode}
-            onChange={(option) =>
-              onChange({
-                item_hs_code: option.value,
-                item_hs_code_label: option.label,
-              })
-            }
-            fetchPage={hsCodeFetcher}
-            placeholder="Select or type an HS code"
-            searchPlaceholder="Search HS codes…"
-            allowCustomValue
-            disabled={disabled}
+            readOnly
+            tabIndex={-1}
+            placeholder="Filled from the item"
+            className="cursor-not-allowed text-muted-foreground focus-visible:ring-0"
           />
         )}
       </FieldShell>

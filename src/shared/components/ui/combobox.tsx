@@ -118,7 +118,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-0">
         {/* Filtering happens above, so cmdk's own matcher is turned off —
             leaving both on would score the list twice with different rules. */}
         <Command shouldFilter={false}>

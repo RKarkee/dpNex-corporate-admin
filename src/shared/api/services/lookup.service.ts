@@ -28,8 +28,8 @@ export interface LookupListMeta {
   has_more: boolean;
 }
 
-export interface LookupListResult {
-  data: LookupOption[];
+export interface LookupListResult<T extends LookupOption = LookupOption> {
+  data: T[];
   meta: LookupListMeta;
 }
 
@@ -81,7 +81,12 @@ function toOption(row: unknown): LookupOption | null {
   };
 }
 
-function readList(raw: unknown, page: number, perPage: number): LookupListResult {
+function readList<T extends LookupOption = LookupOption>(
+  raw: unknown,
+  page: number,
+  perPage: number,
+  toRow: (row: unknown) => T | null = toOption as (row: unknown) => T | null,
+): LookupListResult<T> {
   const body = isRecord(raw) ? raw : {};
   const nested = isRecord(body.data) ? body.data : undefined;
 
@@ -98,7 +103,7 @@ function readList(raw: unknown, page: number, perPage: number): LookupListResult
       : {};
 
   return {
-    data: rows.map(toOption).filter((option): option is LookupOption => option !== null),
+    data: rows.map(toRow).filter((option): option is T => option !== null),
     meta: {
       page: typeof metaSource.page === "number" ? metaSource.page : page,
       per_page:
@@ -110,7 +115,7 @@ function readList(raw: unknown, page: number, perPage: number): LookupListResult
   };
 }
 
-async function fetchLookup(
+async function fetchLookup<T extends LookupOption = LookupOption>(
   path: string,
   page: number,
   perPage: number,
@@ -119,7 +124,9 @@ async function fetchLookup(
   signal?: AbortSignal,
   /** Fixed filters some lists take on every page — e.g. assignables' `module`. */
   extraParams?: Record<string, string>,
-): Promise<LookupListResult> {
+  /** How a row becomes an option — `toOption` unless the caller needs more of it. */
+  toRow?: (row: unknown) => T | null,
+): Promise<LookupListResult<T>> {
   const response = await privateApiClient.request<unknown>(
     "GET",
     path,
@@ -138,7 +145,7 @@ async function fetchLookup(
     },
   );
 
-  return readList(response.raw, page, perPage);
+  return readList<T>(response.raw, page, perPage, toRow);
 }
 
 export function fetchPackageTypes(page: number, perPage: number, query?: string) {
@@ -151,6 +158,41 @@ export function fetchMaterials(page: number, perPage: number, query?: string) {
 
 export function fetchHsCodes(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.hsCodes, page, perPage, query, "q");
+}
+
+/**
+ * An HS code row as an *item*: the name people search for and the code it
+ * carries, which travel together. `value` is the code — not the row's database
+ * id, which is what `toOption` would hand back.
+ */
+export interface HsItemOption extends LookupOption {
+  value: string;
+  /** Same as `value`; named so a caller reading it says what it means. */
+  hsCode: string;
+}
+
+function toHsItemOption(row: unknown): HsItemOption | null {
+  if (!isRecord(row)) return null;
+
+  const code = typeof row.hs_code === "string" ? row.hs_code.trim() : "";
+  if (!code) return null;
+
+  const name = typeof row.name === "string" ? row.name.trim() : "";
+  const label = typeof row.label === "string" ? row.label.trim() : "";
+  return { value: code, hsCode: code, label: name || label || code };
+}
+
+export function fetchHsItems(page: number, perPage: number, query?: string) {
+  return fetchLookup<HsItemOption>(
+    PATHS.hsCodes,
+    page,
+    perPage,
+    query,
+    "q",
+    undefined,
+    undefined,
+    toHsItemOption,
+  );
 }
 
 /** The one list that keys its search as `query` rather than `q`. */

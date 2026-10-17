@@ -39,6 +39,12 @@ import { cn } from "@/shared/lib/utils";
 export interface AsyncComboboxOption {
   value: string;
   label: string;
+  /**
+   * Short muted note at the end of the row — an HS code beside an item name.
+   * Only options that came from the list carry one, so a caller can tell a
+   * pick from free text.
+   */
+  hint?: string;
 }
 
 export interface AsyncComboboxPage {
@@ -212,7 +218,7 @@ export function AsyncCombobox({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-2rem)] p-0"
         // Picking a row moves focus inside the list; without this, Radix pulls
         // it back to the trigger on close and the page jumps.
         onOpenAutoFocus={(event) => multiple && event.preventDefault()}
@@ -261,7 +267,12 @@ export function AsyncCombobox({
                       selected.has(option.value) ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  <span className="truncate">{option.label}</span>
+                  <span className="min-w-0 flex-1 break-words line-clamp-2">{option.label}</span>
+                  {option.hint ? (
+                    <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">
+                      {option.hint}
+                    </span>
+                  ) : null}
                 </CommandItem>
               ))}
             </CommandGroup>

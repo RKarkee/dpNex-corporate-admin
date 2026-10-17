@@ -3,6 +3,7 @@ import {
   fetchCurrencies,
   fetchForwarders,
   fetchHsCodes,
+  fetchHsItems,
   fetchManufacturers,
   fetchMaterials,
   fetchPackageTypes,
@@ -36,6 +37,23 @@ export const packageTypeFetcher = async (page: number, query: string) =>
 
 export const materialFetcher = async (page: number, query: string) =>
   toPage(await fetchMaterials(page, PER_PAGE, query || undefined));
+
+/**
+ * Item names, drawn from the HS code list. The name is what is shown and
+ * searched; the code rides along as the hint and as the option's value, so
+ * picking one can fill both fields.
+ */
+export const hsItemFetcher = async (page: number, query: string) => {
+  const result = await fetchHsItems(page, PER_PAGE, query || undefined);
+  return {
+    options: result.data.map((option) => ({
+      value: option.hsCode,
+      label: option.label,
+      hint: option.hsCode,
+    })),
+    hasMore: result.meta.has_more,
+  };
+};
 
 export const hsCodeFetcher = async (page: number, query: string) =>
   toPage(await fetchHsCodes(page, PER_PAGE, query || undefined));
