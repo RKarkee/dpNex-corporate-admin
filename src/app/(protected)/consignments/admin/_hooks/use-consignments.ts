@@ -32,13 +32,15 @@ import { consignmentAdminKeys } from "./query-keys";
  * keeps its rows while the next answer is in flight, instead of collapsing to a
  * skeleton and back on every keystroke.
  */
-export function useConsignments(page: number, search = "", perPage = 15) {
-  const term = search.trim();
-
+export function useConsignments(
+  page: number,
+  filters: Record<string, any> = {},
+  perPage = 15,
+) {
   return useQuery({
-    queryKey: consignmentAdminKeys.list({ page, perPage, search: term }),
+    queryKey: consignmentAdminKeys.list({ page, perPage, filters }),
     queryFn: ({ signal }) =>
-      listConsignments({ page, perPage, search: term, signal }),
+      listConsignments({ page, perPage, filters, signal }),
     placeholderData: keepPreviousData,
   });
 }

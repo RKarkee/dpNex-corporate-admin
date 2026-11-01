@@ -38,17 +38,22 @@ export const ADMIN_ENDPOINTS = {
   // Shared by both modules: always `/corporate/consignments/...`, never
   // `consignmentrequests` — the backend serves one endpoint for both.
   checkRemoteAddress: "/corporate/consignments/check-remote-address",
-  calculateWeightDimension: "/corporate/consignments/calculate-weight-dimension",
+  calculateWeightDimension:
+    "/corporate/consignments/calculate-weight-dimension",
   /** Shared with the request module upstream, but called independently here. */
   checkRates: "/corporate/check-rates",
   list: BASE,
   detail: (id: number | string) => `${BASE}/${id}`,
   boxes: (id: number | string) => `${BASE}/${id}/boxes`,
-  box: (id: number | string, boxId: number | string) => `${BASE}/${id}/boxes/${boxId}`,
+  box: (id: number | string, boxId: number | string) =>
+    `${BASE}/${id}/boxes/${boxId}`,
   items: (id: number | string, boxId: number | string) =>
     `${BASE}/${id}/boxes/${boxId}/items`,
-  item: (id: number | string, boxId: number | string, itemId: number | string) =>
-    `${BASE}/${id}/boxes/${boxId}/items/${itemId}`,
+  item: (
+    id: number | string,
+    boxId: number | string,
+    itemId: number | string,
+  ) => `${BASE}/${id}/boxes/${boxId}/items/${itemId}`,
 
   deleted: `${BASE}/deleted`,
   restore: (id: number | string) => `${BASE}/${id}/restore`,
@@ -106,8 +111,8 @@ export async function checkRates(
 export interface ConsignmentListParams {
   page?: number;
   perPage?: number;
-  /** Sent to the API, so it matches across every page — not just this one. */
-  search?: string;
+  /** All filter params (search, status[], via/integrator, HAWB range…), sent to the API. */
+  filters?: Record<string, any>;
   signal?: AbortSignal;
 }
 
@@ -161,7 +166,7 @@ function readConsignments(raw: unknown): ConsignmentListItem[] {
 export async function listConsignments({
   page = 1,
   perPage = 15,
-  search,
+  filters,
   signal,
 }: ConsignmentListParams = {}): Promise<ConsignmentListResult> {
   const response = await privateApiClient.request<unknown>(
@@ -169,7 +174,7 @@ export async function listConsignments({
     ADMIN_ENDPOINTS.list,
     undefined,
     {
-      params: { page, per_page: perPage, search: search?.trim() || undefined },
+      params: { page, per_page: perPage, ...(filters ?? {}) },
       // The table renders its own error card; the client's toast would double up.
       silent: true,
       signal,
@@ -253,7 +258,9 @@ export async function fetchConsignment(
     throw new ApiError(404, "Consignment not found.", { payload: raw });
   }
 
-  const nested = Array.isArray(consignment.boxes) ? consignment.boxes : undefined;
+  const nested = Array.isArray(consignment.boxes)
+    ? consignment.boxes
+    : undefined;
   const sibling =
     isRecord(raw) && isRecord(raw.data) && Array.isArray(raw.data.boxes)
       ? (raw.data.boxes as ConsignmentBoxDetail[])
@@ -325,14 +332,15 @@ export function deleteConsignment(id: number): Promise<MutationResult> {
 export async function listDeletedConsignments({
   page = 1,
   perPage = 15,
+  filters,
   signal,
-}: Omit<ConsignmentListParams, "search"> = {}): Promise<ConsignmentListResult> {
+}: ConsignmentListParams = {}): Promise<ConsignmentListResult> {
   const response = await privateApiClient.request<unknown>(
     "GET",
     ADMIN_ENDPOINTS.deleted,
     undefined,
     {
-      params: { page, per_page: perPage },
+      params: { page, per_page: perPage, ...(filters ?? {}) },
       // The tab renders its own error card; the client's toast would double up.
       silent: true,
       signal,
@@ -344,11 +352,15 @@ export async function listDeletedConsignments({
 
 /** `POST /corporate/consignments/{id}/restore` — undoes a delete. */
 export function restoreConsignment(id: number): Promise<MutationResult> {
-  return privateApiClient.mutate("POST", ADMIN_ENDPOINTS.restore(id), undefined, {
-    silent: true,
-  });
+  return privateApiClient.mutate(
+    "POST",
+    ADMIN_ENDPOINTS.restore(id),
+    undefined,
+    {
+      silent: true,
+    },
+  );
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Remote address + weight/dimension checks                                   */

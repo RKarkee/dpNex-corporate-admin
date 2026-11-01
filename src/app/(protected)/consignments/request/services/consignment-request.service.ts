@@ -37,16 +37,21 @@ export const ENDPOINTS = {
   // Shared by both modules: always `/corporate/consignments/...`, never
   // `consignmentrequests` — the backend serves one endpoint for both.
   checkRemoteAddress: "/corporate/consignments/check-remote-address",
-  calculateWeightDimension: "/corporate/consignments/calculate-weight-dimension",
+  calculateWeightDimension:
+    "/corporate/consignments/calculate-weight-dimension",
   checkRates: "/corporate/check-rates",
   list: BASE,
   detail: (id: number | string) => `${BASE}/${id}`,
   boxes: (id: number | string) => `${BASE}/${id}/boxes`,
-  box: (id: number | string, boxId: number | string) => `${BASE}/${id}/boxes/${boxId}`,
+  box: (id: number | string, boxId: number | string) =>
+    `${BASE}/${id}/boxes/${boxId}`,
   items: (id: number | string, boxId: number | string) =>
     `${BASE}/${id}/boxes/${boxId}/items`,
-  item: (id: number | string, boxId: number | string, itemId: number | string) =>
-    `${BASE}/${id}/boxes/${boxId}/items/${itemId}`,
+  item: (
+    id: number | string,
+    boxId: number | string,
+    itemId: number | string,
+  ) => `${BASE}/${id}/boxes/${boxId}/items/${itemId}`,
 
   deleted: `${BASE}/deleted`,
   restore: (id: number | string) => `${BASE}/${id}/restore`,
@@ -54,7 +59,8 @@ export const ENDPOINTS = {
   // Bulk upload from a spreadsheet — see bulk-upload.service.ts.
   bulkUpload: `${BASE}/bulk-upload`,
   bulkUploadTemplate: `${BASE}/bulk-upload/template`,
-  bulkUploadBatch: (batchCode: string) => `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}`,
+  bulkUploadBatch: (batchCode: string) =>
+    `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}`,
   bulkUploadRows: (batchCode: string) =>
     `${BASE}/bulk-upload/${encodeURIComponent(batchCode)}/rows`,
   bulkUploadErrors: (batchCode: string) =>
@@ -121,8 +127,8 @@ export async function checkRates(
 export interface ConsignmentRequestListParams {
   page?: number;
   perPage?: number;
-  /** Sent to the API, so it matches across every page — not just this one. */
-  search?: string;
+  /** All filter params (search, status[], via/integrator, dates…), sent to the API. */
+  filters?: Record<string, any>;
   signal?: AbortSignal;
 }
 
@@ -153,7 +159,8 @@ function readRequests(raw: unknown): ConsignmentRequestListItem[] {
     if (Array.isArray(data.consignmentrequests)) {
       return data.consignmentrequests as ConsignmentRequestListItem[];
     }
-    if (Array.isArray(data.data)) return data.data as ConsignmentRequestListItem[];
+    if (Array.isArray(data.data))
+      return data.data as ConsignmentRequestListItem[];
   }
 
   return [];
@@ -173,7 +180,7 @@ function readRequests(raw: unknown): ConsignmentRequestListItem[] {
 export async function listConsignmentRequests({
   page = 1,
   perPage = 15,
-  search,
+  filters,
   signal,
 }: ConsignmentRequestListParams = {}): Promise<ConsignmentRequestListResult> {
   const response = await privateApiClient.request<unknown>(
@@ -181,7 +188,7 @@ export async function listConsignmentRequests({
     ENDPOINTS.list,
     undefined,
     {
-      params: { page, per_page: perPage, search: search?.trim() || undefined },
+      params: { page, per_page: perPage, ...(filters ?? {}) },
       // The table renders its own error card; the client's toast would double up.
       silent: true,
       signal,
@@ -340,14 +347,15 @@ export function deleteConsignmentRequest(id: number): Promise<MutationResult> {
 export async function listDeletedConsignmentRequests({
   page = 1,
   perPage = 15,
+  filters,
   signal,
-}: Omit<ConsignmentRequestListParams, "search"> = {}): Promise<ConsignmentRequestListResult> {
+}: ConsignmentRequestListParams = {}): Promise<ConsignmentRequestListResult> {
   const response = await privateApiClient.request<unknown>(
     "GET",
     ENDPOINTS.deleted,
     undefined,
     {
-      params: { page, per_page: perPage },
+      params: { page, per_page: perPage, ...(filters ?? {}) },
       // The tab renders its own error card; the client's toast would double up.
       silent: true,
       signal,
@@ -363,7 +371,6 @@ export function restoreConsignmentRequest(id: number): Promise<MutationResult> {
     silent: true,
   });
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Remote address + weight/dimension checks                                   */

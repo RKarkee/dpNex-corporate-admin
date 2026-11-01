@@ -26,15 +26,22 @@ export const consignmentRequestKeys = {
   all: ["consignment-requests"] as const,
 
   lists: () => [...consignmentRequestKeys.all, "list"] as const,
-  list: (params: { page: number; perPage: number; search: string }) =>
-    [...consignmentRequestKeys.lists(), params] as const,
+  list: (params: {
+    page: number;
+    perPage: number;
+    filters: Record<string, unknown>;
+  }) => [...consignmentRequestKeys.lists(), params] as const,
 
   /** The landing page's Deleted tab — under `all`, so a restore refreshes both lists. */
-  deleted: (params: { page: number; perPage: number }) =>
-    [...consignmentRequestKeys.all, "deleted", params] as const,
+  deleted: (params: {
+    page: number;
+    perPage: number;
+    filters: Record<string, unknown>;
+  }) => [...consignmentRequestKeys.all, "deleted", params] as const,
 
   /** Everything under one request — the widest thing any write here touches. */
-  request: (id: number | string) => [...consignmentRequestKeys.all, id] as const,
+  request: (id: number | string) =>
+    [...consignmentRequestKeys.all, id] as const,
 
   detail: (id: number | string) =>
     [...consignmentRequestKeys.request(id), "detail"] as const,
@@ -52,8 +59,11 @@ export const consignmentRequestKeys = {
   items: (id: number | string, boxId: number | string) =>
     [...consignmentRequestKeys.box(id, boxId), "items"] as const,
 
-  item: (id: number | string, boxId: number | string, itemId: number | string) =>
-    [...consignmentRequestKeys.items(id, boxId), itemId] as const,
+  item: (
+    id: number | string,
+    boxId: number | string,
+    itemId: number | string,
+  ) => [...consignmentRequestKeys.items(id, boxId), itemId] as const,
 
   /**
    * Under `request(id)`, so a generate/regenerate that refreshes the request
@@ -83,7 +93,8 @@ export const consignmentRequestKeys = {
     [...consignmentRequestKeys.bulkUpload(batchCode), "rows", params] as const,
 
   /** The uploads list — every page/filter combination sits under `bulkUploadLists`. */
-  bulkUploadLists: () => [...consignmentRequestKeys.all, "bulk-uploads"] as const,
+  bulkUploadLists: () =>
+    [...consignmentRequestKeys.all, "bulk-uploads"] as const,
   bulkUploadList: (params: Record<string, string | number>) =>
     [...consignmentRequestKeys.bulkUploadLists(), params] as const,
 } as const;

@@ -26,12 +26,18 @@ export const consignmentAdminKeys = {
   all: ["corporate-consignments"] as const,
 
   lists: () => [...consignmentAdminKeys.all, "list"] as const,
-  list: (params: { page: number; perPage: number; search: string }) =>
-    [...consignmentAdminKeys.lists(), params] as const,
+  list: (params: {
+    page: number;
+    perPage: number;
+    filters: Record<string, unknown>;
+  }) => [...consignmentAdminKeys.lists(), params] as const,
 
   /** The landing page's Deleted tab — under `all`, so a restore refreshes both lists. */
-  deleted: (params: { page: number; perPage: number }) =>
-    [...consignmentAdminKeys.all, "deleted", params] as const,
+  deleted: (params: {
+    page: number;
+    perPage: number;
+    filters: Record<string, unknown>;
+  }) => [...consignmentAdminKeys.all, "deleted", params] as const,
 
   /** Everything under one consignment — the widest thing any write here touches. */
   record: (id: number | string) => [...consignmentAdminKeys.all, id] as const,
@@ -52,8 +58,11 @@ export const consignmentAdminKeys = {
   items: (id: number | string, boxId: number | string) =>
     [...consignmentAdminKeys.box(id, boxId), "items"] as const,
 
-  item: (id: number | string, boxId: number | string, itemId: number | string) =>
-    [...consignmentAdminKeys.items(id, boxId), itemId] as const,
+  item: (
+    id: number | string,
+    boxId: number | string,
+    itemId: number | string,
+  ) => [...consignmentAdminKeys.items(id, boxId), itemId] as const,
 
   /** Receiver remote-address check, keyed on everything it sends. */
   remoteAddressCheck: (params: Record<string, string>) =>

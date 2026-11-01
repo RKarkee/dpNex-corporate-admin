@@ -19,15 +19,13 @@ import { consignmentRequestKeys } from "./query-keys";
  */
 export function useConsignmentRequests(
   page: number,
-  search = "",
+  filters: Record<string, any> = {},
   perPage = 15,
 ) {
-  const term = search.trim();
-
   return useQuery({
-    queryKey: consignmentRequestKeys.list({ page, perPage, search: term }),
+    queryKey: consignmentRequestKeys.list({ page, perPage, filters }),
     queryFn: ({ signal }) =>
-      listConsignmentRequests({ page, perPage, search: term, signal }),
+      listConsignmentRequests({ page, perPage, filters, signal }),
     placeholderData: keepPreviousData,
   });
 }

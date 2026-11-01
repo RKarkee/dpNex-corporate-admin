@@ -22,11 +22,15 @@ import { consignmentAdminKeys } from "./query-keys";
  * `keepPreviousData` keeps the rows on screen while the next page loads, the
  * same way the main list does.
  */
-export function useDeletedConsignments(page: number, perPage = 15) {
+export function useDeletedConsignments(
+  page: number,
+  filters: Record<string, any> = {},
+  perPage = 15,
+) {
   return useQuery({
-    queryKey: consignmentAdminKeys.deleted({ page, perPage }),
+    queryKey: consignmentAdminKeys.deleted({ page, perPage, filters }),
     queryFn: ({ signal }) =>
-      listDeletedConsignments({ page, perPage, signal }),
+      listDeletedConsignments({ page, perPage, filters, signal }),
     placeholderData: keepPreviousData,
   });
 }
@@ -43,7 +47,9 @@ export function useRestoreConsignment() {
 
     onSuccess: async (result) => {
       toast.success(result.message?.trim() || "Consignment restored");
-      await queryClient.invalidateQueries({ queryKey: consignmentAdminKeys.all });
+      await queryClient.invalidateQueries({
+        queryKey: consignmentAdminKeys.all,
+      });
     },
 
     onError: (error) => {

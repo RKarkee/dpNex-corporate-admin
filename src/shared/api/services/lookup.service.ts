@@ -45,6 +45,14 @@ const PATHS = {
   consignments: "/consignments/get-lists",
   assignables: "/assignables/get-lists",
   corporateUsers: "/corporate/users/get-lists",
+  vias: "/vias/get-lists",
+  integrators: "/integrators/get-lists",
+  integratorMasters: "/integratormasters/get-lists",
+  agents: "/agents/get-lists",
+  agentServices: "/agentservices/get-lists",
+  users: "/users/get-lists",
+  branches: "/branches/get-lists",
+  batches: "/batches/get-lists",
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,7 +85,10 @@ function toOption(row: unknown): LookupOption | null {
 
   return {
     value: raw,
-    label: typeof row.label === "string" && row.label.trim() ? row.label : String(raw),
+    label:
+      typeof row.label === "string" && row.label.trim()
+        ? row.label
+        : String(raw),
   };
 }
 
@@ -148,7 +159,11 @@ async function fetchLookup<T extends LookupOption = LookupOption>(
   return readList<T>(response.raw, page, perPage, toRow);
 }
 
-export function fetchPackageTypes(page: number, perPage: number, query?: string) {
+export function fetchPackageTypes(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
   return fetchLookup(PATHS.packageTypes, page, perPage, query, "q");
 }
 
@@ -200,7 +215,11 @@ export function fetchCurrencies(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.currencies, page, perPage, query, "query");
 }
 
-export function fetchManufacturers(page: number, perPage: number, query?: string) {
+export function fetchManufacturers(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
   return fetchLookup(PATHS.manufacturers, page, perPage, query, "q");
 }
 
@@ -229,7 +248,69 @@ export function fetchCustomers(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.customers, page, perPage, query, "q");
 }
 
-export function fetchConsignments(page: number, perPage: number, query?: string) {
+/* ── Routing + party lists used by the consignment list filters ─────────── */
+
+export function fetchVias(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.vias, page, perPage, query, "q");
+}
+
+/** Integrators, optionally scoped to one via (the per-lane list). */
+export function fetchIntegrators(
+  page: number,
+  perPage: number,
+  query?: string,
+  viaCode?: string,
+) {
+  return fetchLookup(
+    PATHS.integrators,
+    page,
+    perPage,
+    query,
+    "q",
+    undefined,
+    viaCode ? { via_code: viaCode } : undefined,
+  );
+}
+
+/** The via-independent integrator master list. */
+export function fetchIntegratorMasters(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
+  return fetchLookup(PATHS.integratorMasters, page, perPage, query, "q");
+}
+
+export function fetchAgents(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.agents, page, perPage, query, "q");
+}
+
+export function fetchAgentServices(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
+  return fetchLookup(PATHS.agentServices, page, perPage, query, "q");
+}
+
+/** Internal staff, for "who raised the request". */
+export function fetchUsers(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.users, page, perPage, query, "q");
+}
+
+export function fetchBranches(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.branches, page, perPage, query, "q");
+}
+
+export function fetchBatches(page: number, perPage: number, query?: string) {
+  return fetchLookup(PATHS.batches, page, perPage, query, "q");
+}
+
+export function fetchConsignments(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
   return fetchLookup(PATHS.consignments, page, perPage, query, "q");
 }
 
@@ -266,7 +347,11 @@ export function fetchAssignables(
  * Scoped by the `X-Corporate-Code` header like every other `/corporate` route,
  * so this can only ever list colleagues.
  */
-export function fetchCorporateUsers(page: number, perPage: number, query?: string) {
+export function fetchCorporateUsers(
+  page: number,
+  perPage: number,
+  query?: string,
+) {
   return fetchLookup(PATHS.corporateUsers, page, perPage, query, "q");
 }
 
@@ -351,7 +436,9 @@ export function resolveLookupLabel(
 
     try {
       const searched = await fetchPage(1, RESOLVE_PAGE_SIZE, value);
-      const hit = searched.data.find((option) => String(option.value) === value);
+      const hit = searched.data.find(
+        (option) => String(option.value) === value,
+      );
       if (hit) return hit.label;
 
       const firstPage = await fetchPage(1, RESOLVE_PAGE_SIZE);
