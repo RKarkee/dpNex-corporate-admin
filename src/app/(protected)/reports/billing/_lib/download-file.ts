@@ -3,7 +3,7 @@
  *
  * A one-shot action, not a stored `src`: the object URL is revoked the
  * instant the click fires, so there is nothing left for a re-render to race
- * against. Duplicated from `billing-accounts/_lib/download-file.ts` per this
+ * against. Duplicated from `billing/invoices/_lib/download-file.ts` per this
  * codebase's convention of not sharing small helpers across distinct feature
  * modules.
  */

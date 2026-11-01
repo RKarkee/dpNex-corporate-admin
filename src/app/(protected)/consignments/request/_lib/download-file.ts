@@ -1,7 +1,7 @@
 /**
  * Browser-side handling for fetched files — label PDFs here.
  *
- * A sibling of `billing-accounts/_lib/download-file.ts` rather than an import
+ * A sibling of `billing/invoices/_lib/download-file.ts` rather than an import
  * of it, the same way the consignment billing tab keeps its own copy: each
  * feature owns its helpers, so none reaches into another's `_lib`.
  */

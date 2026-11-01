@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 
-import { StatCard, type StatTone } from "../../../_components/stat-card";
+import { StatCard, type StatTone } from "@/app/(protected)/_components/stat-card";
 import { InvoiceStatusBadge } from "../../_components/invoice-status-badge";
 import { PaymentStatusBadge } from "../../_components/payment-status-badge";
 import { formatEnumLabel, formatInvoiceAmount, formatInvoiceDate } from "../../_lib/format-invoice";
@@ -128,7 +128,7 @@ export function StatementResults({ isPending, isError, error, onRetry, statement
                   <TableRow key={invoice.id} className="bg-card">
                     <TableCell className="max-w-40 sm:max-w-xs">
                       <Link
-                        href={`/billing-accounts/${invoice.id}`}
+                        href={`/billing/invoices/${invoice.id}`}
                         className="block truncate font-medium text-foreground hover:text-primary hover:underline"
                       >
                         {invoice.invoice_no}

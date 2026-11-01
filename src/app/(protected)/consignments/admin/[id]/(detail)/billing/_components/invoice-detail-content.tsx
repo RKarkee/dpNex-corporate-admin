@@ -33,7 +33,7 @@ import type { Invoice, InvoiceAdjustment, InvoiceLine, InvoiceParty, StatementPa
  * The full bill: header totals, the two parties, shipment reference facts,
  * the charge lines, the totals breakdown and any payments already applied.
  *
- * Standalone sibling of `billing-accounts/[id]/_components/invoice-detail.tsx`
+ * Standalone sibling of `billing/invoices/[id]/_components/invoice-detail.tsx`
  * — laid out for a dialog body here rather than a page (no shipment/tracking
  * line, since every invoice in this tab already belongs to the one
  * consignment the dialog was opened from).

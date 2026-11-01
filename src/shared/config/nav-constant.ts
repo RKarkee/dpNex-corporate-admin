@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Truck,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -117,7 +118,7 @@ export const sidebarNav: NavItem[] = [
         icon: Receipt,
         // No permission gate: no confirmed `view_billing`-style grant is
         // published for this resource yet — see
-        // `reports/billing/permissions.ts` (same gap as Billing Accounts).
+        // `reports/billing/permissions.ts` (same gap as Billing > Invoice).
       },
       {
         title: "Outstanding",
@@ -137,17 +138,25 @@ export const sidebarNav: NavItem[] = [
     ],
   },
   {
-    title: "Billing Accounts",
-    href: "/billing-accounts",
-    icon: Landmark,
-    // Permission names are unconfirmed for this CRM-admin resource — see
-    // `billing-accounts/permissions.ts` for why several are listed together.
-    // anyPermission: [
-    //   "view_billing_account",
-    //   "view_any_billing_account",
-    //   "view_customer_billing_account",
-    //   "crm_view_billing_account",
-    // ],
+    title: "Billing",
+    icon: Wallet,
+    children: [
+      {
+        title: "Invoice",
+        href: "/billing/invoices",
+        icon: Receipt,
+        // See `billing/invoices/permissions.ts`.
+        permission: "view_billing",
+      },
+      {
+        title: "Billing Accounts",
+        href: "/billing/accounts",
+        icon: Landmark,
+        // No grant of its own in `/me` — rides on the billing group's
+        // `view_billing`. See `billing/accounts/permissions.ts`.
+        permission: "view_billing",
+      },
+    ],
   },
   {
     title: "Approval Requests",

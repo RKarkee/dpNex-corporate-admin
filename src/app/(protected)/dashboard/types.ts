@@ -5,7 +5,7 @@
  *
  * Confirmed against a live response. Numbers inside `consignments`,
  * `billing` and `collections` arrive as decimal strings (`"1027.00"`), the
- * same convention `billing-accounts`/`consignments/admin` billing use
+ * same convention `billing/invoices`/`consignments/admin` billing use
  * elsewhere; `requests` and the tile `value`/`previous`/`change` fields are
  * plain JSON numbers.
  */

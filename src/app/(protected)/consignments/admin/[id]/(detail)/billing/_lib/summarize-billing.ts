@@ -4,7 +4,7 @@ import type { ConsignmentBillingSummary } from "../services/consignment-billing.
  * Turns an unconfirmed `/corporate/consignments/{id}/billings/summary`
  * payload into something a tab can render without knowing its exact field
  * names ahead of time. Standalone sibling of
- * `billing-accounts/_lib/summarize-billing.ts` — same heuristic, same
+ * `billing/invoices/_lib/summarize-billing.ts` — same heuristic, same
  * restraint: show what can be shown honestly, nothing invented.
  */
 

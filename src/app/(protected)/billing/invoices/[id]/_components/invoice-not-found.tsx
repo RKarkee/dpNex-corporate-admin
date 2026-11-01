@@ -20,9 +20,9 @@ export function InvoiceNotFound() {
       description="It may have been removed, or it belongs to another corporate."
       action={
         <Button variant="outline" asChild>
-          <Link href="/billing-accounts">
+          <Link href="/billing/invoices">
             <ArrowLeft className="size-4" />
-            Back to billing accounts
+            Back to invoices
           </Link>
         </Button>
       }

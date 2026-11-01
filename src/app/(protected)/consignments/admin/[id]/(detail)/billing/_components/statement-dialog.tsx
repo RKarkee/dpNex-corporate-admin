@@ -52,7 +52,7 @@ function defaultRange(): { from: string; to: string } {
  * The bill statement for this consignment, in a dialog rather than a
  * separate page — this tab follows the same Documents/Boxes convention the
  * invoice detail view uses, so a "different page" for the corporate-wide
- * statement (see `billing-accounts/statement/page.tsx`) becomes a
+ * statement (see `billing/invoices/statement/page.tsx`) becomes a
  * "different view" here instead, without leaving the tab.
  *
  * The date range is applied on submit, not on every keystroke — each change

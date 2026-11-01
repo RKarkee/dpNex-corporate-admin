@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { isApiError } from "@/shared/api/errors";
 import { toast } from "@/shared/components/toast";
 
-import { downloadInvoicePdf } from "@/app/(protected)/billing-accounts/services/billing-invoices.service";
+import { downloadInvoicePdf } from "@/app/(protected)/billing/invoices/services/billing-invoices.service";
 import { downloadBlob, safeFileName } from "../_lib/download-file";
 
 export interface DownloadInvoicePdfInput {

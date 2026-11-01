@@ -2,7 +2,7 @@
  * Shared by the tab's list and detail dialog, so a bill reads the same
  * amount and the same date regardless of which view it's in.
  *
- * Standalone sibling of `billing-accounts/_lib/format-invoice.ts` — same
+ * Standalone sibling of `billing/invoices/_lib/format-invoice.ts` — same
  * reasoning as `types.ts` in this module.
  */
 

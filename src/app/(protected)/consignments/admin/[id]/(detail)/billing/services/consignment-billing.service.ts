@@ -13,7 +13,7 @@ import type { BillingStatement, Invoice, InvoiceAdjustment, InvoiceLine, Stateme
  * statement paths follow this API's established sub-resource pattern — the
  * same bet `documents.service.ts` makes for its own unconfirmed create/update
  * paths — and the envelope readers below accept the shapes already confirmed
- * for the corporate-wide equivalents in `billing-accounts`.
+ * for the corporate-wide equivalents in `billing/invoices`.
  */
 
 function basePath(consignmentId: number | string): string {
@@ -24,7 +24,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Picks the invoice array out of whichever envelope this endpoint uses — same fallback order `readInvoices` uses in `billing-accounts`. */
+/** Picks the invoice array out of whichever envelope this endpoint uses — same fallback order `readInvoices` uses in `billing/invoices`. */
 function readInvoiceList(raw: unknown): Record<string, unknown>[] {
   if (Array.isArray(raw)) return raw.filter(isRecord);
   if (!isRecord(raw)) return [];

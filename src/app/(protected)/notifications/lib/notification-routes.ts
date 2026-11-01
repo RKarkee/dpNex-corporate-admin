@@ -25,8 +25,8 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   consignmentadmin: (id) => `/consignments/admin/${id}`,
   pickuprequest: (id) => `/pickup-requests/${id}`,
   approvalrequest: (id) => `/approval-requests/${id}`,
-  invoice: (id) => `/billing-accounts/${id}`,
-  billingaccount: (id) => `/billing-accounts/${id}`,
+  invoice: (id) => `/billing/invoices/${id}`,
+  billingaccount: (id) => `/billing/accounts/${id}`,
   user: (id) => `/users/${id}`,
   role: (id) => `/roles/${id}`,
 };

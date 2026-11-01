@@ -2,7 +2,7 @@
  * The billing domain for one consignment, as
  * `/corporate/consignments/{id}/billings` models it.
  *
- * A standalone sibling of `billing-accounts/types.ts` — same underlying
+ * A standalone sibling of `billing/invoices/types.ts` — same underlying
  * invoice resource, confirmed there against a live response, but this is a
  * different endpoint family scoped to one consignment rather than the whole
  * corporate. Kept separate rather than imported so this tab is free to
@@ -156,7 +156,7 @@ export interface Invoice {
 /**
  * `/corporate/consignments/{id}/billings/statement` — unverified for this
  * scoped endpoint, but modelled on the confirmed corporate-wide statement
- * (`billing-accounts/types.ts`), which this almost certainly mirrors, filtered
+ * (`billing/invoices/types.ts`), which this almost certainly mirrors, filtered
  * to one consignment.
  */
 

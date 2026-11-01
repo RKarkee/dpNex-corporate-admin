@@ -19,7 +19,7 @@ import { InvoiceRowActions } from "./invoice-row-actions";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
 
 /**
- * Mirrors `billing-accounts/_components/invoices-table.tsx`. The "Billed to"
+ * Mirrors `billing/invoices/_components/invoices-table.tsx`. The "Billed to"
  * column is dropped here — every row already belongs to this one
  * consignment's account, so it would repeat the same name down the column.
  */

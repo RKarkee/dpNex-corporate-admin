@@ -26,7 +26,7 @@ const TONES: StatTone[] = ["navy", "crimson", "orange"];
 /**
  * Headline billing figures above this consignment's invoice table — context
  * for the list below, not a destination of its own. Mirrors
- * `billing-accounts/_components/billing-summary.tsx`, including its
+ * `billing/invoices/_components/billing-summary.tsx`, including its
  * quiet-failure behaviour: the table below shows its own error and empty
  * states, so a second error card here would be noise.
  */

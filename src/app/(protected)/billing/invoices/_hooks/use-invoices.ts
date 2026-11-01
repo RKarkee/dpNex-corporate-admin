@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { listInvoices } from "@/app/(protected)/billing-accounts/services/billing-invoices.service";
+import { listInvoices } from "@/app/(protected)/billing/invoices/services/billing-invoices.service";
 
 /**
  * One page of `/corporate/billing/invoices`.

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchBillingSummary } from "@/app/(protected)/billing-accounts/services/billing-summary.service";
+import { fetchBillingSummary } from "@/app/(protected)/billing/invoices/services/billing-summary.service";
 
 /**
  * Headline billing figures, fetched once for the summary page.

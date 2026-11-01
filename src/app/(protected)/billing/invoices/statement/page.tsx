@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Search } from "lucide-react";
 
+import { RequirePermission } from "@/shared/auth/require-permission";
 import { PageHeader } from "@/shared/components/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -12,6 +13,7 @@ import { Label } from "@/shared/components/ui/label";
 
 import { useBillingStatement } from "../_hooks/use-billing-statement";
 import { safeFileName } from "../_lib/download-file";
+import { INVOICE_PERMISSIONS } from "../permissions";
 import { StatementResults } from "./_components/statement-results";
 import { downloadCsv } from "@/shared/lib/csv";
 
@@ -28,9 +30,7 @@ function defaultRange(): { from: string; to: string } {
 }
 
 /**
- * No `RequirePermission` wrapper — same reasoning as the rest of this
- * section: permission names for this resource are unconfirmed, and the API
- * still scopes every call to the caller's own corporate.
+ * Guarded by `view_statement`.
  *
  * The date range is applied on submit, not on every keystroke in the date
  * inputs — each change here is a real network request, unlike the client-side
@@ -90,14 +90,14 @@ export default function BillingStatementPage() {
   }
 
   return (
-    <>
+    <RequirePermission permission={INVOICE_PERMISSIONS.statement}>
       <PageHeader
         title="Bill Statement"
         description="Invoices and payments on your billing account for a date range."
         actions={
           <>
             <Button variant="outline" asChild className="flex-1 sm:flex-none">
-              <Link href="/billing-accounts">
+              <Link href="/billing/invoices">
                 <ArrowLeft className="size-4" />
                 Back
               </Link>
@@ -156,6 +156,6 @@ export default function BillingStatementPage() {
         onRetry={() => void query.refetch()}
         statement={statement}
       />
-    </>
+    </RequirePermission>
   );
 }

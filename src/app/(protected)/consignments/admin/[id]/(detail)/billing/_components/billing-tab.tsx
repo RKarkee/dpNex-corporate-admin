@@ -27,7 +27,7 @@ function matches(invoice: Invoice, term: string): boolean {
 /**
  * The Billing tab: this consignment's own bills.
  *
- * A standalone sibling of `billing-accounts` — same list/detail/PDF/summary/
+ * A standalone sibling of `billing/invoices` — same list/detail/PDF/summary/
  * statement feature set, scoped to one consignment via
  * `/corporate/consignments/{id}/billings`. "View bill" opens its own page
  * (`/consignments/admin/{id}/billing/{invoiceId}`, outside the tab shell) —

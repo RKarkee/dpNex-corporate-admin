@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchBillingStatement } from "@/app/(protected)/billing-accounts/services/billing-statement.service";
+import { fetchBillingStatement } from "@/app/(protected)/billing/invoices/services/billing-statement.service";
 
 /** One statement, for a given `[from, to]` range. Both are `YYYY-MM-DD`. */
 export function useBillingStatement(from: string, to: string) {

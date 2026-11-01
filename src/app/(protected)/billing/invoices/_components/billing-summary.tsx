@@ -11,8 +11,9 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 
-import { StatCard, type StatTone } from "../../_components/stat-card";
+import { StatCard, type StatTone } from "@/app/(protected)/_components/stat-card";
 import { useBillingSummary } from "../_hooks/use-billing-summary";
+import { useInvoicePermissions } from "../_hooks/use-invoice-permissions";
 import { formatInvoiceAmount } from "../_lib/format-invoice";
 import {
   summaryBreakdowns,
@@ -39,6 +40,13 @@ const TONES: StatTone[] = ["navy", "crimson", "orange"];
  * carry rather than a fixed set of named cards.
  */
 export function BillingSummary() {
+  // Checked here, above the component that queries, so a user without
+  // `view_billing_summary` never sends a request the API would refuse.
+  const { canViewSummary } = useInvoicePermissions();
+  return canViewSummary ? <BillingSummaryContent /> : null;
+}
+
+function BillingSummaryContent() {
   const { data, isPending, isError } = useBillingSummary();
 
   if (isError) return null;

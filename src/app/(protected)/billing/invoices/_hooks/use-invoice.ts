@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchInvoice } from "@/app/(protected)/billing-accounts/services/billing-invoices.service";
+import { fetchInvoice } from "@/app/(protected)/billing/invoices/services/billing-invoices.service";
 
 /**
  * One invoice, for the detail page.

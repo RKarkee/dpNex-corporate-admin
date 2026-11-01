@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { FileText } from "lucide-react";
 
+import { RequirePermission } from "@/shared/auth/require-permission";
 import { PageHeader } from "@/shared/components/page-header";
-import { Button } from "@/shared/components/ui/button";
 
 import { BillingSummary } from "./_components/billing-summary";
 import { InvoicesView } from "./_components/invoices-view";
+import { StatementButton } from "./_components/statement-button";
+import { INVOICE_PERMISSIONS } from "./permissions";
 
 export const metadata: Metadata = {
-  title: "Billing Accounts",
+  title: "Invoice",
 };
 
 /**
- * No `RequirePermission` wrapper: the nav entry for this page
- * (`nav-constant.ts`) leaves its permission names commented out too — they
- * are unconfirmed for this CRM-admin resource. The API still scopes every
- * call to the caller's own corporate regardless.
+ * Guarded by `view_billing`. The summary and the statement link each check
+ * their own grant (`view_billing_summary`, `view_statement`) and simply do not
+ * render without it.
  *
  * The summary used to live on its own page behind a "Bill summary" button;
  * it renders here instead, above the table, as context for the list rather
@@ -24,23 +23,16 @@ export const metadata: Metadata = {
  * is scoped to a date range the user picks, not something that fits inline
  * above the table the way the summary does.
  */
-export default function BillingAccountsPage() {
+export default function InvoicesPage() {
   return (
-    <>
+    <RequirePermission permission={INVOICE_PERMISSIONS.view}>
       <PageHeader
-        title="Billing Accounts"
+        title="Invoice"
         description="Invoices billed to your corporate account."
-        actions={
-          <Button variant="outline" asChild>
-            <Link href="/billing-accounts/statement">
-              <FileText className="size-4" />
-              Bill statement
-            </Link>
-          </Button>
-        }
+        actions={<StatementButton />}
       />
       <BillingSummary />
       <InvoicesView />
-    </>
+    </RequirePermission>
   );
 }

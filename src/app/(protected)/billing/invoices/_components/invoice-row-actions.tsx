@@ -12,6 +12,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 
 import { useDownloadInvoicePdf } from "../_hooks/use-download-invoice-pdf";
+import { useInvoicePermissions } from "../_hooks/use-invoice-permissions";
 import type { Invoice } from "../types";
 
 /**
@@ -23,6 +24,7 @@ import type { Invoice } from "../types";
  */
 export function InvoiceRowActions({ invoice }: { invoice: Invoice }) {
   const downloadPdf = useDownloadInvoicePdf();
+  const { canPrint } = useInvoicePermissions();
 
   return (
     <DropdownMenu>
@@ -45,18 +47,20 @@ export function InvoiceRowActions({ invoice }: { invoice: Invoice }) {
         {/* `asChild` + `Link` rather than `router.push`, so it is a real
             anchor — middle-click and "open in new tab" both work. */}
         <DropdownMenuItem asChild>
-          <Link href={`/billing-accounts/${invoice.id}`}>
+          <Link href={`/billing/invoices/${invoice.id}`}>
             <Eye />
             View bill
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          onSelect={() => downloadPdf.mutate({ id: invoice.id, invoiceNo: invoice.invoice_no })}
-        >
-          <Download />
-          Download PDF
-        </DropdownMenuItem>
+        {canPrint ? (
+          <DropdownMenuItem
+            onSelect={() => downloadPdf.mutate({ id: invoice.id, invoiceNo: invoice.invoice_no })}
+          >
+            <Download />
+            Download PDF
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -8,7 +8,7 @@ import { Card } from "@/shared/components/ui/card";
 
 /**
  * The table's failure state, scoped to one consignment's billing tab.
- * Mirrors `billing-accounts/_components/invoices-error-state.tsx`.
+ * Mirrors `billing/invoices/_components/invoices-error-state.tsx`.
  */
 export function InvoicesErrorState({
   error,

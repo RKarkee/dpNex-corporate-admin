@@ -1,7 +1,7 @@
 /**
  * Saves a blob to disk via a throwaway `<a download>` click.
  *
- * Standalone sibling of `billing-accounts/_lib/download-file.ts` — see that
+ * Standalone sibling of `billing/invoices/_lib/download-file.ts` — see that
  * file for why the object URL is revoked immediately rather than kept as a
  * stored `src`.
  */
