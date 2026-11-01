@@ -52,7 +52,7 @@ export function ShipmentDetailsFields({
   const needPickup = watch("need_pickup");
   const currencyLabel = watch("declared_currency_label");
 
-  const { urgencyOptions, productTypeOptions } = useMetaOptions();
+  const { productTypeOptions } = useMetaOptions();
 
   return (
     <Card className="p-6 sm:p-8">
@@ -61,27 +61,11 @@ export function ShipmentDetailsFields({
         description="How and when this consignment should move."
         icon={Truck}
       >
-        <FieldShell label="Urgency" required error={errors.urgency?.message}>
-          {() => (
-            <Controller
-              control={control}
-              name="urgency"
-              render={({ field }) => (
-                <Combobox
-                  options={urgencyOptions}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  placeholder="Select urgency"
-                  searchPlaceholder="Search urgency…"
-                  allowCustomValue={false}
-                  aria-invalid={Boolean(errors.urgency)}
-                />
-              )}
-            />
-          )}
-        </FieldShell>
-
-        <FieldShell label="Ship date" required error={errors.ship_date?.message}>
+        <FieldShell
+          label="Ship date"
+          required
+          error={errors.ship_date?.message}
+        >
           {({ id, describedBy }) => (
             <Input
               id={id}

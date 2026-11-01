@@ -66,9 +66,16 @@ function parseQuotedBoxes(raw: string | null): QuotedBox[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.flatMap((box) => {
       const measures = ["weight", "length", "width", "height"] as const;
-      const values = measures.map((key) => Number((box as Record<string, unknown>)?.[key]));
+      const values = measures.map((key) =>
+        Number((box as Record<string, unknown>)?.[key]),
+      );
       if (!values.every((n) => Number.isFinite(n) && n > 0)) return [];
-      const [weight, length, width, height] = values as [number, number, number, number];
+      const [weight, length, width, height] = values as [
+        number,
+        number,
+        number,
+        number,
+      ];
       return [{ weight, length, width, height }];
     });
   } catch {
@@ -95,7 +102,6 @@ export function CreateConsignmentView() {
 
   const defaultValues = React.useMemo<ConsignmentAdminFormValues>(
     () => ({
-      urgency: "",
       sender: { ...senderDefaults },
       receiver: {
         ...receiverDefaults,

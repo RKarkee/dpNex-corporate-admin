@@ -133,6 +133,7 @@ export interface ConsignmentSender {
   sender_telephone?: string;
   sender_telephone_ext?: string;
   sender_address_type: PartyAddressType;
+  sender_save_address: YesNo;
 }
 
 export interface ConsignmentReceiver {
@@ -151,6 +152,7 @@ export interface ConsignmentReceiver {
   receiver_telephone?: string;
   receiver_telephone_ext?: string;
   receiver_address_type: PartyAddressType;
+  receiver_save_address: YesNo;
   receiver_latitude?: number;
   receiver_longitude?: number;
 }
@@ -201,7 +203,6 @@ export interface CreateConsignmentPayload {
   /** The quote the user picked, exactly as check-rates returned it. */
   selected_rate: RateOption;
   package_type: string;
-  urgency: UrgencyLevel;
 
   sender: ConsignmentSender;
   receiver: ConsignmentReceiver;
@@ -515,7 +516,6 @@ export interface ReassignPayload {
 export interface CancelPayload {
   reason: string;
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Remote address + weight/dimension checks                                   */

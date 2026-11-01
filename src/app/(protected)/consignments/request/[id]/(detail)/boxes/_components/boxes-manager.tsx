@@ -27,7 +27,10 @@ import {
 } from "@/shared/components/ui/table";
 import { optionLabel, useMetaOptions } from "@/shared/hooks/use-meta-options";
 
-import { useConsignmentBoxes, useDeleteBox } from "../_hooks/use-consignment-boxes";
+import {
+  useConsignmentBoxes,
+  useDeleteBox,
+} from "../_hooks/use-consignment-boxes";
 import type { ConsignmentBoxDetail } from "../../../../types";
 import { BoxFormDialog, type BoxShipmentContext } from "./box-form-dialog";
 import { DetailDialog, type DetailRow } from "./detail-dialog";
@@ -86,11 +89,16 @@ export function BoxesManager({
   const [page, setPage] = React.useState(1);
   const [expanded, setExpanded] = React.useState<Set<number>>(new Set());
   const [dialog, setDialog] = React.useState<{ boxId?: number } | null>(null);
-  const [viewing, setViewing] = React.useState<ConsignmentBoxDetail | null>(null);
+  const [viewing, setViewing] = React.useState<ConsignmentBoxDetail | null>(
+    null,
+  );
   const [pendingDelete, setPendingDelete] =
     React.useState<ConsignmentBoxDetail | null>(null);
 
-  const { data, isPending, isFetching } = useConsignmentBoxes(consignmentId, page);
+  const { data, isPending, isFetching } = useConsignmentBoxes(
+    consignmentId,
+    page,
+  );
   const deleteBox = useDeleteBox(consignmentId);
 
   const boxes = data?.boxes ?? [];
@@ -107,8 +115,10 @@ export function BoxesManager({
   // Continues the sequence rather than restarting at 1, so numbering stays
   // meaningful after a box in the middle is removed.
   const nextBoxNo =
-    boxes.reduce((highest, box) => Math.max(highest, Number(box.box_no) || 0), 0) +
-    1;
+    boxes.reduce(
+      (highest, box) => Math.max(highest, Number(box.box_no) || 0),
+      0,
+    ) + 1;
 
   const viewRows: DetailRow[] = viewing
     ? [
@@ -157,8 +167,12 @@ export function BoxesManager({
                 <TableHead className="w-10" />
                 <TableHead>Box</TableHead>
                 <TableHead>Weight</TableHead>
-                <TableHead className="hidden lg:table-cell">Volumetric</TableHead>
-                <TableHead className="hidden xl:table-cell">L × W × H</TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  Volumetric
+                </TableHead>
+                <TableHead className="hidden xl:table-cell">
+                  L × W × H
+                </TableHead>
                 <TableHead className="hidden sm:table-cell">Pieces</TableHead>
                 <TableHead className="hidden lg:table-cell">Qty code</TableHead>
                 <TableHead className="hidden md:table-cell">HS code</TableHead>
@@ -231,13 +245,17 @@ export function BoxesManager({
                         {/* The stored value is a code (`PCS`); `/meta` carries
                             the name to show for it. */}
                         <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
-                          {optionLabel(quantityCodeOptions, box.quantity_code) || "—"}
+                          {optionLabel(
+                            quantityCodeOptions,
+                            box.quantity_code,
+                          ) || "—"}
                         </TableCell>
                         <TableCell className="hidden text-muted-foreground md:table-cell">
                           {show(box.hs_code)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
-                          {show(box.declared_value)} {box.declared_currency ?? ""}
+                          {show(box.declared_value)}{" "}
+                          {box.declared_currency ?? ""}
                         </TableCell>
 
                         <TableCell className="text-right">
@@ -277,11 +295,17 @@ export function BoxesManager({
 
                       {isOpen ? (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={COLUMNS} className="bg-secondary/40 p-4">
+                          <TableCell
+                            colSpan={COLUMNS}
+                            className="bg-secondary/40 p-4"
+                          >
                             <ItemsSubTable
                               consignmentId={consignmentId}
                               boxId={boxId}
                               permissions={permissions}
+                              receiverCountry={
+                                shipmentContext?.receiver?.country
+                              }
                             />
                           </TableCell>
                         </TableRow>

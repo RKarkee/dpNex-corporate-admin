@@ -62,6 +62,8 @@ const partySchema = z.object({
   telephone_ext: z.string().optional(),
   // Any key `/meta` publishes for `customer_address_type`.
   address_type: z.string().min(1, "Address type is required"),
+  // Save this party's address to the address book on submit. Default off.
+  save_address: z.enum(YES_NO).default("N"),
 });
 
 /** Exported for the Update Sender dialog, which validates one party on its own. */
@@ -104,7 +106,9 @@ const boxSchema = z.object({
   quantity_code: z.string().min(1, "Required"),
   declared_currency: z.string().min(1, "Required"),
   declared_currency_label: z.string().optional(),
-  declared_value: z.coerce.number().nonnegative("Declared value cannot be negative"),
+  declared_value: z.coerce
+    .number()
+    .nonnegative("Declared value cannot be negative"),
   // A box with nothing in it cannot clear customs, so the API rejects it —
   // better to say so here than to round-trip for a 422.
   items: z.array(boxItemSchema).min(1, "Add at least one item to this box"),
@@ -112,8 +116,6 @@ const boxSchema = z.object({
 
 export const consignmentFormSchema = z
   .object({
-    urgency: z.string().min(1, "Urgency is required"),
-
     sender: senderSchema,
     receiver: receiverSchema,
     boxes: z.array(boxSchema).min(1, "Add at least one box"),
@@ -134,7 +136,9 @@ export const consignmentFormSchema = z
     consignment_hs_code_label: z.string().optional(),
 
     consignment_goods_desc: z.string().optional(),
-    declared_value: z.coerce.number().nonnegative("Declared value cannot be negative"),
+    declared_value: z.coerce
+      .number()
+      .nonnegative("Declared value cannot be negative"),
     declared_currency: z.string().min(1, "Required"),
     declared_currency_label: z.string().optional(),
 
@@ -236,6 +240,7 @@ export const senderDefaults: ConsignmentFormValues["sender"] = {
   // Filled from `/meta`'s `customer_address_type` default by AddressFields
   // once meta answers — never a hardcoded type.
   address_type: "",
+  save_address: "N",
 };
 
 /** The receiver's country comes from the rate check, so it starts blank. */

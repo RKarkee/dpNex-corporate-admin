@@ -13,6 +13,7 @@ import {
   getStatesOfCountry,
 } from "@countrystatecity/countries-browser";
 
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
 import { NativeSelect } from "@/shared/components/ui/native-select";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
@@ -68,8 +69,9 @@ export function AddressFields({
 }: AddressFieldsProps) {
   // Sender and receiver share every field the block below renders; the
   // receiver's extra coordinates are read off `errors.receiver` directly.
-  const partyErrors = (errors[namePrefix] ??
-    {}) as FieldErrors<ConsignmentFormInput["sender"]>;
+  const partyErrors = (errors[namePrefix] ?? {}) as FieldErrors<
+    ConsignmentFormInput["sender"]
+  >;
 
   // The prefix is a literal union and every suffix is a known key, so the path
   // is valid by construction — but TS cannot narrow a template literal into
@@ -78,15 +80,13 @@ export function AddressFields({
     `${namePrefix}.${key}` as Path<ConsignmentFormInput>;
 
   const cityValue = useWatch({ control, name: path("city") }) as
-    | string
-    | undefined;
+    string | undefined;
 
   // Address type — options and default both come from `/meta`
   // (`customer_address_type`).
   const { addressTypeOptions, addressTypeDefault } = useMetaOptions();
   const addressTypeValue = useWatch({ control, name: path("address_type") }) as
-    | string
-    | undefined;
+    string | undefined;
 
   // A stored type `/meta` no longer lists stays selectable, so an older record
   // does not open with a blank select.
@@ -94,7 +94,10 @@ export function AddressFields({
     () =>
       addressTypeValue &&
       !addressTypeOptions.some((option) => option.value === addressTypeValue)
-        ? [...addressTypeOptions, { value: addressTypeValue, label: addressTypeValue }]
+        ? [
+            ...addressTypeOptions,
+            { value: addressTypeValue, label: addressTypeValue },
+          ]
         : addressTypeOptions,
     [addressTypeOptions, addressTypeValue],
   );
@@ -156,8 +159,12 @@ export function AddressFields({
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
       // At most COORD_DECIMALS (3) places, cut not rounded: 45.34567 -> 45.345.
-      setValue("receiver.latitude", truncateDecimals(lat, COORD_DECIMALS), { shouldDirty: false });
-      setValue("receiver.longitude", truncateDecimals(lng, COORD_DECIMALS), { shouldDirty: false });
+      setValue("receiver.latitude", truncateDecimals(lat, COORD_DECIMALS), {
+        shouldDirty: false,
+      });
+      setValue("receiver.longitude", truncateDecimals(lng, COORD_DECIMALS), {
+        shouldDirty: false,
+      });
     })();
 
     return () => {
@@ -211,7 +218,11 @@ export function AddressFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Email" error={partyErrors.email?.message} hint="Optional">
+      <FieldShell
+        label="Email"
+        error={partyErrors.email?.message}
+        hint="Optional"
+      >
         {({ id, describedBy }) => (
           <Input
             id={id}
@@ -340,6 +351,30 @@ export function AddressFields({
                 onChange={(event) => field.onChange(event.target.value)}
                 onBlur={field.onBlur}
               />
+            )}
+          />
+        )}
+      </FieldShell>
+
+      <FieldShell label="Save address" hint="Add to the address book">
+        {({ id }) => (
+          <Controller
+            control={control}
+            name={path("save_address")}
+            render={({ field }) => (
+              <label
+                htmlFor={id}
+                className="flex h-11 items-center gap-2 text-sm text-muted-foreground"
+              >
+                <Checkbox
+                  id={id}
+                  checked={field.value === "Y"}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true ? "Y" : "N")
+                  }
+                />
+                Save this address for next time
+              </label>
             )}
           />
         )}

@@ -5,17 +5,22 @@ import { Combobox } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
-import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
+import {
+  blockSignInputProps,
+  nonNegativeInputProps,
+} from "@/shared/lib/number-input";
 
 import { DEFAULT_CURRENCY, DEFAULT_QUANTITY_CODE } from "../../../../schema";
 import type { ItemWritePayload } from "../../../../types";
 import { FieldShell } from "../../../../_components/field-shell";
 import {
   currencyFetcher,
+  hsCodeFetcher,
   hsItemFetcher,
   manufacturerFetcher,
   materialFetcher,
 } from "../../../../_components/lookup-fetchers";
+import { useRestrictedItemCheck } from "@/shared/hooks/use-restricted-item-check";
 
 /**
  * One item's fields, state shape, validation and payload mapping — in one place.
@@ -114,9 +119,7 @@ const ITEM_ENTRY_FIELDS = [
 ] as const satisfies readonly (keyof ItemFormState)[];
 
 /** Field name → message, empty when the item is valid. */
-export function validateItemForm(
-  form: ItemFormState,
-): Record<string, string> {
+export function validateItemForm(form: ItemFormState): Record<string, string> {
   const errors: Record<string, string> = {};
 
   if (!form.item_name.trim()) errors.item_name = "Item name is required";
@@ -169,6 +172,8 @@ export interface ItemFieldsProps {
   /** Field name → message. Server-side and client-side both land here. */
   errors?: Record<string, string | undefined>;
   disabled?: boolean;
+  /** Destination country, sent with the restricted-item check. */
+  receiverCountry?: string | null;
 }
 
 export function ItemFields({
@@ -176,8 +181,10 @@ export function ItemFields({
   onChange,
   errors = {},
   disabled = false,
+  receiverCountry,
 }: ItemFieldsProps) {
   const { quantityCodeOptions, genderOptions } = useMetaOptions();
+  const checkRestricted = useRestrictedItemCheck();
 
   /**
    * Names for the four codes the record stores.
@@ -227,13 +234,18 @@ export function ItemFields({
           <AsyncCombobox
             value={value.item_hs_code || value.item_name}
             selectedLabel={value.item_name || undefined}
-            onChange={(option) =>
+            onChange={(option) => {
               onChange({
                 item_name: option.label,
                 // Only rows from the list carry a hint; free text has no code.
                 item_hs_code: option.hint ? option.value : "",
-              })
-            }
+                item_hs_code_label: option.hint ? option.value : "",
+              });
+              checkRestricted({
+                item_name: option.label,
+                receiver_country: receiverCountry ?? undefined,
+              });
+            }}
             fetchPage={hsItemFetcher}
             placeholder="Search item name"
             searchPlaceholder="Search item name or HS code…"
@@ -244,15 +256,32 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="HS code" hint="Filled from the item">
-        {({ id }) => (
-          <Input
-            id={id}
+      <FieldShell label="HS code" hint="Filled from the item — editable">
+        {() => (
+          // Editable: filled when an item is picked, but the user can search
+          // another code or type their own. Disabled until a name is entered.
+          <AsyncCombobox
             value={value.item_hs_code}
-            readOnly
-            tabIndex={-1}
-            placeholder="Filled from the item"
-            className="cursor-not-allowed text-muted-foreground focus-visible:ring-0"
+            selectedLabel={
+              value.item_hs_code_label || value.item_hs_code || undefined
+            }
+            onChange={(option) => {
+              onChange({
+                item_hs_code: option.value,
+                item_hs_code_label: option.label,
+              });
+              checkRestricted({
+                hs_code: option.value,
+                receiver_country: receiverCountry ?? undefined,
+              });
+            }}
+            fetchPage={hsCodeFetcher}
+            placeholder="Select or type an HS code"
+            searchPlaceholder="Search HS codes…"
+            allowCustomValue
+            clearable
+            clearLabel="Clear HS code"
+            disabled={disabled || !value.item_name.trim()}
           />
         )}
       </FieldShell>
@@ -322,7 +351,9 @@ export function ItemFields({
             {...blockSignInputProps}
             value={value.quantity}
             disabled={disabled}
-            onChange={(event) => onChange(withTotal({ quantity: event.target.value }))}
+            onChange={(event) =>
+              onChange(withTotal({ quantity: event.target.value }))
+            }
             aria-describedby={describedBy}
             aria-invalid={error("quantity") ? true : undefined}
           />
@@ -357,7 +388,9 @@ export function ItemFields({
             {...nonNegativeInputProps}
             value={value.item_rate}
             disabled={disabled}
-            onChange={(event) => onChange(withTotal({ item_rate: event.target.value }))}
+            onChange={(event) =>
+              onChange(withTotal({ item_rate: event.target.value }))
+            }
             aria-describedby={describedBy}
             aria-invalid={error("item_rate") ? true : undefined}
           />

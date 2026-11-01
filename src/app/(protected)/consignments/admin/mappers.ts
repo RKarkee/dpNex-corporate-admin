@@ -56,7 +56,8 @@ function toCoordinate(value: unknown): number | undefined {
 
 /** The API sometimes returns `"Y "` with trailing space; trim before comparing. */
 function toYesNo(value: unknown, fallback: YesNo): YesNo {
-  const trimmed = typeof value === "string" ? value.trim().toUpperCase() : value;
+  const trimmed =
+    typeof value === "string" ? value.trim().toUpperCase() : value;
   return trimmed === "Y" || trimmed === "N" ? trimmed : fallback;
 }
 
@@ -100,6 +101,7 @@ export function toSenderPayload(
     sender_telephone: optional(sender.sender_telephone),
     sender_telephone_ext: optional(sender.sender_telephone_ext),
     sender_address_type: sender.sender_address_type,
+    sender_save_address: sender.sender_save_address,
   };
 }
 
@@ -123,6 +125,7 @@ export function toReceiverPayload(
     receiver_telephone: optional(receiver.receiver_telephone),
     receiver_telephone_ext: optional(receiver.receiver_telephone_ext),
     receiver_address_type: receiver.receiver_address_type,
+    receiver_save_address: receiver.receiver_save_address,
     receiver_latitude: receiver.receiver_latitude,
     receiver_longitude: receiver.receiver_longitude,
   };
@@ -164,7 +167,6 @@ function toBoxPayloads(
 /** The parts of the body that create and update word identically. */
 function toSharedPayload(data: ConsignmentAdminFormValues) {
   return {
-    urgency: data.urgency,
     sender: toSenderPayload(data.sender),
     receiver: toReceiverPayload(data.receiver),
     boxes: toBoxPayloads(data.boxes),
@@ -290,15 +292,14 @@ export function mapDetailToFormValues(
         str(item.item_quantity_code) || newBoxDefaults.quantity_code,
       item_rate: toNumber(item.item_rate),
       item_total_amount: toNumber(item.item_total_amount),
-      item_currency: str(item.item_currency) || newBoxDefaults.declared_currency,
+      item_currency:
+        str(item.item_currency) || newBoxDefaults.declared_currency,
       item_currency_label:
         str(item.item_currency) || newBoxDefaults.declared_currency,
     })),
   }));
 
   return {
-    urgency: str(detail.urgency),
-
     sender: {
       sender_first_name: str(sender.sender_first_name),
       sender_last_name: str(sender.sender_last_name),
@@ -316,6 +317,7 @@ export function mapDetailToFormValues(
       sender_telephone_ext: str(sender.sender_telephone_ext),
       // Blank when the record has none — AddressFields then fills in meta's default.
       sender_address_type: str(sender.sender_address_type),
+      sender_save_address: toYesNo(sender.sender_save_address, "N"),
     },
 
     receiver: {
@@ -334,6 +336,7 @@ export function mapDetailToFormValues(
       receiver_telephone: str(receiver.receiver_telephone),
       receiver_telephone_ext: str(receiver.receiver_telephone_ext),
       receiver_address_type: str(receiver.receiver_address_type),
+      receiver_save_address: toYesNo(receiver.receiver_save_address, "N"),
       receiver_latitude: toCoordinate(receiver.receiver_latitude),
       receiver_longitude: toCoordinate(receiver.receiver_longitude),
     },

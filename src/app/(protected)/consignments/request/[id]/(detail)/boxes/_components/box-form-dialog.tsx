@@ -18,7 +18,10 @@ import { Input } from "@/shared/components/ui/input";
 import { WeightDimensionBanner } from "@/shared/components/ui/weight-dimension-banner";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
-import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
+import {
+  blockSignInputProps,
+  nonNegativeInputProps,
+} from "@/shared/lib/number-input";
 import { cn } from "@/shared/lib/utils";
 
 import { useConsignmentBox, useSaveBox } from "../_hooks/use-consignment-boxes";
@@ -30,7 +33,10 @@ import type {
   WeightDimensionCheckResult,
 } from "../../../../types";
 import { FieldShell } from "../../../../_components/field-shell";
-import { currencyFetcher, hsCodeFetcher } from "../../../../_components/lookup-fetchers";
+import {
+  currencyFetcher,
+  hsCodeFetcher,
+} from "../../../../_components/lookup-fetchers";
 import {
   EMPTY_ITEM_FORM,
   isPristineItem,
@@ -126,7 +132,11 @@ interface AppliedWeightCheck {
   flags: WeightCheckFlags;
 }
 
-const EMPTY_APPLIED: AppliedWeightCheck = { result: null, validWeight: "", flags: {} };
+const EMPTY_APPLIED: AppliedWeightCheck = {
+  result: null,
+  validWeight: "",
+  flags: {},
+};
 
 /** The values a check response fills in; `undefined` = not in the response. */
 function mapWeightCheck(result: WeightDimensionCheckResult) {
@@ -140,13 +150,20 @@ function mapWeightCheck(result: WeightDimensionCheckResult) {
         : undefined,
     quantityCode: code ? String(code).trim().toUpperCase() : undefined,
     validWeight:
-      w?.valid_weight != null && w.valid_weight !== "" ? String(w.valid_weight) : undefined,
+      w?.valid_weight != null && w.valid_weight !== ""
+        ? String(w.valid_weight)
+        : undefined,
   };
 }
 
 export interface BoxShipmentContext {
   routing: ShipmentRouting;
-  receiver: { country?: string | null; state?: string | null; city?: string | null; zip?: string | null };
+  receiver: {
+    country?: string | null;
+    state?: string | null;
+    city?: string | null;
+    zip?: string | null;
+  };
 }
 
 /** One item being composed alongside a new box. */
@@ -320,7 +337,8 @@ export function BoxFormDialog({
       next.goods_desc = "Goods description is required";
     }
     if (!form.quantity_code) next.quantity_code = "Quantity code is required";
-    if (!form.declared_currency) next.declared_currency = "Currency is required";
+    if (!form.declared_currency)
+      next.declared_currency = "Currency is required";
 
     const declared = toNumber(form.declared_value);
     if (declared === undefined || declared < 0) {
@@ -407,25 +425,34 @@ export function BoxFormDialog({
   // (locked, display only, never sent) and Quantity Code (still editable);
   // highlights in amber whatever the latest response changed.
   const [dimensionsTouched, setDimensionsTouched] = React.useState(false);
-  const [applied, setApplied] = React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
+  const [applied, setApplied] =
+    React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
   const { validWeight, flags } = applied;
   const setFlags = (update: (current: WeightCheckFlags) => WeightCheckFlags) =>
     setApplied((current) => ({ ...current, flags: update(current.flags) }));
 
-  const setDimension = (key: "weight" | "length" | "width" | "height", value: string) => {
+  const setDimension = (
+    key: "weight" | "length" | "width" | "height",
+    value: string,
+  ) => {
     setDimensionsTouched(true);
     set(key, value);
   };
 
   const weightCheck = useCheckWeightDimension({
     boxNo: toNumber(form.box_no) ?? nextBoxNo ?? 1,
-    routing: shipmentContext?.routing ?? { viaCode: "", integratorCode: "", packageType: "" },
+    routing: shipmentContext?.routing ?? {
+      viaCode: "",
+      integratorCode: "",
+      packageType: "",
+    },
     receiver: shipmentContext?.receiver ?? {},
     weight: form.weight,
     length: form.length,
     width: form.width,
     height: form.height,
-    enabled: open && dimensionsTouched && !loadingRecord && Boolean(shipmentContext),
+    enabled:
+      open && dimensionsTouched && !loadingRecord && Boolean(shipmentContext),
   });
 
   // A new result is folded into state during render (React's "adjust state
@@ -440,7 +467,8 @@ export function BoxFormDialog({
       flags: {
         volumetric:
           mapped.volumetric !== undefined &&
-          (form.volumetric_weight === "" || Number(form.volumetric_weight) !== mapped.volumetric),
+          (form.volumetric_weight === "" ||
+            Number(form.volumetric_weight) !== mapped.volumetric),
         quantityCode:
           mapped.quantityCode !== undefined &&
           form.quantity_code.trim().toUpperCase() !== mapped.quantityCode,
@@ -448,8 +476,12 @@ export function BoxFormDialog({
     });
     setForm((current) => ({
       ...current,
-      ...(mapped.volumetric !== undefined ? { volumetric_weight: String(mapped.volumetric) } : {}),
-      ...(mapped.quantityCode !== undefined ? { quantity_code: mapped.quantityCode } : {}),
+      ...(mapped.volumetric !== undefined
+        ? { volumetric_weight: String(mapped.volumetric) }
+        : {}),
+      ...(mapped.quantityCode !== undefined
+        ? { quantity_code: mapped.quantityCode }
+        : {}),
     }));
   }
 
@@ -487,7 +519,11 @@ export function BoxFormDialog({
                 )}
               </FieldShell>
 
-              <FieldShell label="Weight (kg)" required error={fieldError("weight")}>
+              <FieldShell
+                label="Weight (kg)"
+                required
+                error={fieldError("weight")}
+              >
                 {({ id, describedBy }) => (
                   <Input
                     id={id}
@@ -495,10 +531,14 @@ export function BoxFormDialog({
                     step="any"
                     {...nonNegativeInputProps}
                     value={form.weight}
-                    onChange={(event) => setDimension("weight", event.target.value)}
+                    onChange={(event) =>
+                      setDimension("weight", event.target.value)
+                    }
                     aria-describedby={describedBy}
                     aria-invalid={fieldError("weight") ? true : undefined}
-                    className={weightMismatch ? CHECK_HIGHLIGHT_CLASS : undefined}
+                    className={
+                      weightMismatch ? CHECK_HIGHLIGHT_CLASS : undefined
+                    }
                   />
                 )}
               </FieldShell>
@@ -511,7 +551,9 @@ export function BoxFormDialog({
                     step="any"
                     {...nonNegativeInputProps}
                     value={form.length}
-                    onChange={(event) => setDimension("length", event.target.value)}
+                    onChange={(event) =>
+                      setDimension("length", event.target.value)
+                    }
                   />
                 )}
               </FieldShell>
@@ -524,7 +566,9 @@ export function BoxFormDialog({
                     step="any"
                     {...nonNegativeInputProps}
                     value={form.width}
-                    onChange={(event) => setDimension("width", event.target.value)}
+                    onChange={(event) =>
+                      setDimension("width", event.target.value)
+                    }
                   />
                 )}
               </FieldShell>
@@ -537,12 +581,17 @@ export function BoxFormDialog({
                     step="any"
                     {...nonNegativeInputProps}
                     value={form.height}
-                    onChange={(event) => setDimension("height", event.target.value)}
+                    onChange={(event) =>
+                      setDimension("height", event.target.value)
+                    }
                   />
                 )}
               </FieldShell>
 
-              <FieldShell label="Volumetric weight" hint="Auto-filled by weight check">
+              <FieldShell
+                label="Volumetric weight"
+                hint="Auto-filled by weight check"
+              >
                 {({ id, describedBy }) => (
                   <>
                     <Input
@@ -553,16 +602,24 @@ export function BoxFormDialog({
                       tabIndex={-1}
                       value={form.volumetric_weight}
                       aria-describedby={describedBy}
-                      className={cn(LOCKED_FIELD_CLASS, flags.volumetric && CHECK_HIGHLIGHT_CLASS)}
+                      className={cn(
+                        LOCKED_FIELD_CLASS,
+                        flags.volumetric && CHECK_HIGHLIGHT_CLASS,
+                      )}
                     />
                     {flags.volumetric ? (
-                      <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                      <p className={CHECK_HINT_CLASS}>
+                        Updated from weight check — please review
+                      </p>
                     ) : null}
                   </>
                 )}
               </FieldShell>
 
-              <FieldShell label="Valid weight" hint="Accepted weight — not sent on save">
+              <FieldShell
+                label="Valid weight"
+                hint="Accepted weight — not sent on save"
+              >
                 {({ id, describedBy }) => (
                   <>
                     <Input
@@ -574,7 +631,10 @@ export function BoxFormDialog({
                       placeholder="Auto-filled by weight check"
                       value={validWeight}
                       aria-describedby={describedBy}
-                      className={cn(LOCKED_FIELD_CLASS, weightMismatch && CHECK_HIGHLIGHT_CLASS)}
+                      className={cn(
+                        LOCKED_FIELD_CLASS,
+                        weightMismatch && CHECK_HIGHLIGHT_CLASS,
+                      )}
                     />
                     {weightMismatch ? (
                       <p className={CHECK_HINT_CLASS}>
@@ -615,17 +675,24 @@ export function BoxFormDialog({
                       options={quantityCodeOptions}
                       value={form.quantity_code}
                       onChange={(value) => {
-                        setFlags((current) => ({ ...current, quantityCode: false }));
+                        setFlags((current) => ({
+                          ...current,
+                          quantityCode: false,
+                        }));
                         set("quantity_code", value);
                       }}
                       placeholder="Select or type a code"
                       searchPlaceholder="Search codes…"
                       allowCustomValue
                       aria-invalid={Boolean(fieldError("quantity_code"))}
-                      className={flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined}
+                      className={
+                        flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined
+                      }
                     />
                     {flags.quantityCode ? (
-                      <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                      <p className={CHECK_HINT_CLASS}>
+                        Updated from weight check — please review
+                      </p>
                     ) : null}
                   </>
                 )}
@@ -659,7 +726,9 @@ export function BoxFormDialog({
                 {() => (
                   <AsyncCombobox
                     value={form.declared_currency}
-                    selectedLabel={form.declared_currency_label || resolvedCurrency}
+                    selectedLabel={
+                      form.declared_currency_label || resolvedCurrency
+                    }
                     onChange={(option) =>
                       setForm((current) => ({
                         ...current,
@@ -688,9 +757,13 @@ export function BoxFormDialog({
                     step="0.01"
                     {...nonNegativeInputProps}
                     value={form.declared_value}
-                    onChange={(event) => set("declared_value", event.target.value)}
+                    onChange={(event) =>
+                      set("declared_value", event.target.value)
+                    }
                     aria-describedby={describedBy}
-                    aria-invalid={fieldError("declared_value") ? true : undefined}
+                    aria-invalid={
+                      fieldError("declared_value") ? true : undefined
+                    }
                   />
                 )}
               </FieldShell>
@@ -721,7 +794,8 @@ export function BoxFormDialog({
                   ? {
                       divisor: weightCheck.result.weights?.divisor,
                       oversize_exception: weightCheck.result.oversize_exception,
-                      overweight_exception: weightCheck.result.overweight_exception,
+                      overweight_exception:
+                        weightCheck.result.overweight_exception,
                       exception_types: weightCheck.result.exception_types,
                     }
                   : null
@@ -795,6 +869,7 @@ export function BoxFormDialog({
                         onChange={(next) => patchItem(row.localId, next)}
                         errors={row.errors}
                         disabled={saveBox.isPending}
+                        receiverCountry={shipmentContext?.receiver?.country}
                       />
                     </div>
                   </div>

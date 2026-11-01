@@ -11,11 +11,19 @@ import { Combobox, type ComboboxOption } from "@/shared/components/ui/combobox";
 import { Input } from "@/shared/components/ui/input";
 import { WeightDimensionBanner } from "@/shared/components/ui/weight-dimension-banner";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
-import { blockSignInputProps, nonNegativeInputProps } from "@/shared/lib/number-input";
+import {
+  blockSignInputProps,
+  nonNegativeInputProps,
+} from "@/shared/lib/number-input";
 import { cn } from "@/shared/lib/utils";
 
 import { useCheckWeightDimension } from "../_hooks/use-check-weight-dimension";
-import type { QuotedBox, ShipmentRouting, WeightDimensionCheckResult } from "../types";
+import { useRestrictedItemCheck } from "@/shared/hooks/use-restricted-item-check";
+import type {
+  QuotedBox,
+  ShipmentRouting,
+  WeightDimensionCheckResult,
+} from "../types";
 
 import { newBoxDefaults, newItemDefaults } from "../schema";
 import { FieldGroup, FieldShell } from "./field-shell";
@@ -77,7 +85,11 @@ interface AppliedWeightCheck {
   flags: WeightCheckFlags;
 }
 
-const EMPTY_APPLIED: AppliedWeightCheck = { result: null, validWeight: "", flags: {} };
+const EMPTY_APPLIED: AppliedWeightCheck = {
+  result: null,
+  validWeight: "",
+  flags: {},
+};
 
 /** The values a check response fills in; `undefined` = not in the response. */
 function mapWeightCheck(result: WeightDimensionCheckResult) {
@@ -91,7 +103,9 @@ function mapWeightCheck(result: WeightDimensionCheckResult) {
         : undefined,
     quantityCode: code ? String(code).trim().toUpperCase() : undefined,
     validWeight:
-      w?.valid_weight != null && w.valid_weight !== "" ? String(w.valid_weight) : undefined,
+      w?.valid_weight != null && w.valid_weight !== ""
+        ? String(w.valid_weight)
+        : undefined,
   };
 }
 
@@ -214,6 +228,18 @@ export function BoxesFields({
             autoCheckOnMount={Boolean(quotedBoxes)}
           />
         ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            append({ ...newBoxDefaults, box_no: fields.length + 1 })
+          }
+          className="w-full border-dashed"
+        >
+          <Plus className="size-4" />
+          Add box
+        </Button>
       </FieldGroup>
     </Card>
   );
@@ -257,7 +283,10 @@ function BoxRow({
 
   // Subscribed individually so a keystroke in one box does not re-render the
   // whole array.
-  const hsCodeLabel = useWatch({ control, name: `boxes.${index}.hs_code_label` });
+  const hsCodeLabel = useWatch({
+    control,
+    name: `boxes.${index}.hs_code_label`,
+  });
   const currencyLabel = useWatch({
     control,
     name: `boxes.${index}.declared_currency_label`,
@@ -273,11 +302,19 @@ function BoxRow({
   const length = useWatch({ control, name: `boxes.${index}.length` });
   const width = useWatch({ control, name: `boxes.${index}.width` });
   const height = useWatch({ control, name: `boxes.${index}.height` });
-  const volumetric = useWatch({ control, name: `boxes.${index}.volumetric_weight` });
-  const quantityCode = useWatch({ control, name: `boxes.${index}.quantity_code` });
+  const volumetric = useWatch({
+    control,
+    name: `boxes.${index}.volumetric_weight`,
+  });
+  const quantityCode = useWatch({
+    control,
+    name: `boxes.${index}.quantity_code`,
+  });
 
-  const [dimensionsTouched, setDimensionsTouched] = React.useState(autoCheckOnMount);
-  const [applied, setApplied] = React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
+  const [dimensionsTouched, setDimensionsTouched] =
+    React.useState(autoCheckOnMount);
+  const [applied, setApplied] =
+    React.useState<AppliedWeightCheck>(EMPTY_APPLIED);
   const { validWeight, flags } = applied;
   const setFlags = (update: (current: WeightCheckFlags) => WeightCheckFlags) =>
     setApplied((current) => ({ ...current, flags: update(current.flags) }));
@@ -305,10 +342,14 @@ function BoxRow({
       flags: {
         volumetric:
           mapped.volumetric !== undefined &&
-          (volumetric === "" || volumetric == null || Number(volumetric) !== mapped.volumetric),
+          (volumetric === "" ||
+            volumetric == null ||
+            Number(volumetric) !== mapped.volumetric),
         quantityCode:
           mapped.quantityCode !== undefined &&
-          String(quantityCode ?? "").trim().toUpperCase() !== mapped.quantityCode,
+          String(quantityCode ?? "")
+            .trim()
+            .toUpperCase() !== mapped.quantityCode,
       },
     });
   }
@@ -321,10 +362,14 @@ function BoxRow({
     if (!applied.result) return;
     const mapped = mapWeightCheck(applied.result);
     if (mapped.volumetric !== undefined) {
-      setValue(`boxes.${index}.volumetric_weight`, mapped.volumetric, { shouldDirty: true });
+      setValue(`boxes.${index}.volumetric_weight`, mapped.volumetric, {
+        shouldDirty: true,
+      });
     }
     if (mapped.quantityCode !== undefined) {
-      setValue(`boxes.${index}.quantity_code`, mapped.quantityCode, { shouldDirty: true });
+      setValue(`boxes.${index}.quantity_code`, mapped.quantityCode, {
+        shouldDirty: true,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applied.result]);
@@ -373,7 +418,11 @@ function BoxRow({
           )}
         </FieldShell>
 
-        <FieldShell label="Weight (kg)" required error={boxErrors?.weight?.message}>
+        <FieldShell
+          label="Weight (kg)"
+          required
+          error={boxErrors?.weight?.message}
+        >
           {({ id, describedBy }) => (
             <Input
               id={id}
@@ -426,7 +475,10 @@ function BoxRow({
 
         {/* Locked: filled by the weight check. readOnly, NOT disabled — a
             disabled react-hook-form input submits as undefined. */}
-        <FieldShell label="Volumetric weight" hint="Auto-filled by weight check">
+        <FieldShell
+          label="Volumetric weight"
+          hint="Auto-filled by weight check"
+        >
           {({ id, describedBy }) => (
             <>
               <Input
@@ -436,17 +488,25 @@ function BoxRow({
                 readOnly
                 tabIndex={-1}
                 aria-describedby={describedBy}
-                className={cn(LOCKED_FIELD_CLASS, flags.volumetric && CHECK_HIGHLIGHT_CLASS)}
+                className={cn(
+                  LOCKED_FIELD_CLASS,
+                  flags.volumetric && CHECK_HIGHLIGHT_CLASS,
+                )}
                 {...register(`boxes.${index}.volumetric_weight`)}
               />
               {flags.volumetric ? (
-                <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                <p className={CHECK_HINT_CLASS}>
+                  Updated from weight check — please review
+                </p>
               ) : null}
             </>
           )}
         </FieldShell>
 
-        <FieldShell label="Valid weight" hint="Accepted weight — not sent on save">
+        <FieldShell
+          label="Valid weight"
+          hint="Accepted weight — not sent on save"
+        >
           {({ id, describedBy }) => (
             <>
               <Input
@@ -458,7 +518,10 @@ function BoxRow({
                 placeholder="Auto-filled by weight check"
                 aria-describedby={describedBy}
                 value={validWeight}
-                className={cn(LOCKED_FIELD_CLASS, weightMismatch && CHECK_HIGHLIGHT_CLASS)}
+                className={cn(
+                  LOCKED_FIELD_CLASS,
+                  weightMismatch && CHECK_HIGHLIGHT_CLASS,
+                )}
               />
               {weightMismatch ? (
                 <p className={CHECK_HINT_CLASS}>
@@ -504,12 +567,16 @@ function BoxRow({
                     placeholder="Select or type a code"
                     searchPlaceholder="Search codes…"
                     allowCustomValue
-                    className={flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined}
+                    className={
+                      flags.quantityCode ? CHECK_HIGHLIGHT_CLASS : undefined
+                    }
                   />
                 )}
               />
               {flags.quantityCode ? (
-                <p className={CHECK_HINT_CLASS}>Updated from weight check — please review</p>
+                <p className={CHECK_HINT_CLASS}>
+                  Updated from weight check — please review
+                </p>
               ) : null}
             </>
           )}
@@ -730,12 +797,23 @@ function BoxItemRow({
 
   const itemName = useWatch({ control, name: `${base}.item_name` });
   const itemHsCode = useWatch({ control, name: `${base}.item_hs_code` });
-  const materialLabel = useWatch({ control, name: `${base}.item_material_label` });
+  const materialLabel = useWatch({
+    control,
+    name: `${base}.item_material_label`,
+  });
   const manufacturerLabel = useWatch({
     control,
     name: `${base}.item_manufacturer_label`,
   });
-  const currencyLabel = useWatch({ control, name: `${base}.item_currency_label` });
+  const currencyLabel = useWatch({
+    control,
+    name: `${base}.item_currency_label`,
+  });
+  const receiverCountry = useWatch({
+    control,
+    name: "receiver.receiver_country",
+  }) as string | undefined;
+  const checkRestricted = useRestrictedItemCheck();
 
   // Total = Quantity x Rate, kept in sync here; the field itself is locked.
   // After its own setValue the total already matches, so this stops.
@@ -791,8 +869,14 @@ function BoxItemRow({
                   onChange={(option) => {
                     field.onChange(option.label);
                     // Only rows from the list carry a hint; free text has no code.
-                    setValue(`${base}.item_hs_code`, option.hint ? option.value : "", {
+                    const hs = option.hint ? option.value : "";
+                    setValue(`${base}.item_hs_code`, hs, { shouldDirty: true });
+                    setValue(`${base}.item_hs_code_label`, hs, {
                       shouldDirty: true,
+                    });
+                    checkRestricted({
+                      item_name: option.label,
+                      receiver_country: receiverCountry,
                     });
                   }}
                   fetchPage={hsItemFetcher}
@@ -806,15 +890,36 @@ function BoxItemRow({
           )}
         </FieldShell>
 
-        <FieldShell label="HS code" hint="Filled from the item">
-          {({ id }) => (
-            <Input
-              id={id}
-              value={itemHsCode ?? ""}
-              readOnly
-              tabIndex={-1}
-              placeholder="Filled from the item"
-              className="cursor-not-allowed text-muted-foreground focus-visible:ring-0"
+        <FieldShell label="HS code" hint="Filled from the item — editable">
+          {() => (
+            // Editable: filled when an item is picked, but the user can search
+            // another code or type their own. Disabled until a name is entered.
+            <Controller
+              control={control}
+              name={`${base}.item_hs_code`}
+              render={({ field }) => (
+                <AsyncCombobox
+                  value={field.value ?? ""}
+                  selectedLabel={itemHsCode || undefined}
+                  onChange={(option) => {
+                    field.onChange(option.value);
+                    setValue(`${base}.item_hs_code_label`, option.label, {
+                      shouldDirty: true,
+                    });
+                    checkRestricted({
+                      hs_code: option.value,
+                      receiver_country: receiverCountry,
+                    });
+                  }}
+                  fetchPage={hsCodeFetcher}
+                  placeholder="Select or type an HS code"
+                  searchPlaceholder="Search HS codes…"
+                  allowCustomValue
+                  clearable
+                  clearLabel="Clear HS code"
+                  disabled={!(itemName ?? "").toString().trim()}
+                />
+              )}
             />
           )}
         </FieldShell>
@@ -884,7 +989,11 @@ function BoxItemRow({
           )}
         </FieldShell>
 
-        <FieldShell label="Quantity" required error={itemErrors?.quantity?.message}>
+        <FieldShell
+          label="Quantity"
+          required
+          error={itemErrors?.quantity?.message}
+        >
           {({ id, describedBy }) => (
             <Input
               id={id}
@@ -917,7 +1026,11 @@ function BoxItemRow({
           )}
         </FieldShell>
 
-        <FieldShell label="Rate" required error={itemErrors?.item_rate?.message}>
+        <FieldShell
+          label="Rate"
+          required
+          error={itemErrors?.item_rate?.message}
+        >
           {({ id, describedBy }) => (
             <Input
               id={id}

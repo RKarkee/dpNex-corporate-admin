@@ -67,6 +67,7 @@ export const senderSchema = z.object({
   sender_telephone_ext: z.string().optional(),
   // Any key `/meta` publishes for `customer_address_type`.
   sender_address_type: z.string().min(1, "Address type is required"),
+  sender_save_address: z.enum(YES_NO).default("N"),
 });
 
 export const receiverSchema = z.object({
@@ -85,6 +86,7 @@ export const receiverSchema = z.object({
   receiver_telephone: z.string().optional(),
   receiver_telephone_ext: z.string().optional(),
   receiver_address_type: z.string().min(1, "Address type is required"),
+  receiver_save_address: z.enum(YES_NO).default("N"),
   /** Derived from the chosen city; editable. */
   receiver_latitude: optionalCoordinate,
   receiver_longitude: optionalCoordinate,
@@ -121,7 +123,9 @@ const boxSchema = z.object({
   quantity_code: z.string().min(1, "Required"),
   declared_currency: z.string().min(1, "Required"),
   declared_currency_label: z.string().optional(),
-  declared_value: z.coerce.number().nonnegative("Declared value cannot be negative"),
+  declared_value: z.coerce
+    .number()
+    .nonnegative("Declared value cannot be negative"),
   // A box with nothing in it cannot clear customs, so the API rejects it —
   // better to say so here than to round-trip for a 422.
   items: z.array(itemSchema).min(1, "Add at least one item to this box"),
@@ -129,8 +133,6 @@ const boxSchema = z.object({
 
 export const consignmentAdminFormSchema = z
   .object({
-    urgency: z.string().min(1, "Urgency is required"),
-
     sender: senderSchema,
     receiver: receiverSchema,
     boxes: z.array(boxSchema).min(1, "Add at least one box"),
@@ -151,7 +153,9 @@ export const consignmentAdminFormSchema = z
     consignment_hs_code_label: z.string().optional(),
 
     consignment_goods_desc: z.string().min(1, "Goods description is required"),
-    declared_value: z.coerce.number().nonnegative("Declared value cannot be negative"),
+    declared_value: z.coerce
+      .number()
+      .nonnegative("Declared value cannot be negative"),
     declared_currency: z.string().min(1, "Required"),
     declared_currency_label: z.string().optional(),
 
@@ -185,8 +189,12 @@ export const consignmentAdminFormSchema = z
  * different types with this name exist" error, because the resolver's output no
  * longer matches the form's values.
  */
-export type ConsignmentAdminFormInput = z.input<typeof consignmentAdminFormSchema>;
-export type ConsignmentAdminFormValues = z.output<typeof consignmentAdminFormSchema>;
+export type ConsignmentAdminFormInput = z.input<
+  typeof consignmentAdminFormSchema
+>;
+export type ConsignmentAdminFormValues = z.output<
+  typeof consignmentAdminFormSchema
+>;
 
 export type AdminBoxFormValues = ConsignmentAdminFormValues["boxes"][number];
 export type AdminItemFormValues = AdminBoxFormValues["items"][number];
@@ -253,6 +261,7 @@ export const senderDefaults: ConsignmentAdminFormValues["sender"] = {
   // Filled from `/meta`'s `customer_address_type` default by AddressFields
   // once meta answers — never a hardcoded type.
   sender_address_type: "",
+  sender_save_address: "N",
 };
 
 /** The receiver's country comes from the rate check, so it starts blank. */
@@ -272,6 +281,7 @@ export const receiverDefaults: ConsignmentAdminFormValues["receiver"] = {
   receiver_telephone: "",
   receiver_telephone_ext: "",
   receiver_address_type: "",
+  receiver_save_address: "N",
   receiver_latitude: undefined,
   receiver_longitude: undefined,
 };

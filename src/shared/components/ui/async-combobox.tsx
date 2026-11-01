@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -75,6 +75,9 @@ export interface AsyncComboboxProps {
   debounceMs?: number;
   /** Lets the user submit text the endpoint does not know about. */
   allowCustomValue?: boolean;
+  /** Shows a "Clear" row at the top that resets the value to empty. */
+  clearable?: boolean;
+  clearLabel?: string;
   "aria-invalid"?: boolean;
 }
 
@@ -93,6 +96,8 @@ export function AsyncCombobox({
   minSearchLength = 3,
   debounceMs = 350,
   allowCustomValue = false,
+  clearable = false,
+  clearLabel = "Clear",
   "aria-invalid": ariaInvalid,
 }: AsyncComboboxProps) {
   const [open, setOpen] = React.useState(false);
@@ -213,7 +218,10 @@ export function AsyncCombobox({
           <span className="truncate">
             {selectedLabel || (multiple ? "" : value) || placeholder}
           </span>
-          <ChevronsUpDown aria-hidden className="ml-2 size-4 shrink-0 opacity-50" />
+          <ChevronsUpDown
+            aria-hidden
+            className="ml-2 size-4 shrink-0 opacity-50"
+          />
         </Button>
       </PopoverTrigger>
 
@@ -232,23 +240,40 @@ export function AsyncCombobox({
             onValueChange={setSearch}
           />
           <CommandList ref={listRef} onScroll={handleScroll}>
-            {!loading && options.length === 0 ? (
-              <CommandEmpty>
-                {allowCustomValue && search.trim() ? (
-                  <button
-                    type="button"
-                    onClick={commitCustomValue}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
-                  >
-                    Use &ldquo;{search.trim()}&rdquo;
-                  </button>
-                ) : (
-                  emptyText
-                )}
-              </CommandEmpty>
+            {!loading &&
+            options.length === 0 &&
+            !(allowCustomValue && search.trim()) &&
+            !(clearable && value) ? (
+              <CommandEmpty>{emptyText}</CommandEmpty>
             ) : null}
 
             <CommandGroup>
+              {/* Clear and "Use …" sit at the top so the user never has to
+                  scroll past the whole list to reach them. */}
+              {!multiple && clearable && value ? (
+                <CommandItem
+                  key="__clear__"
+                  value="__clear__"
+                  onSelect={() => {
+                    onChange({ value: "", label: "" });
+                    setOpen(false);
+                  }}
+                  className="text-muted-foreground"
+                >
+                  <X aria-hidden className="mr-2 size-4" />
+                  {clearLabel}
+                </CommandItem>
+              ) : null}
+              {!multiple && allowCustomValue && search.trim() ? (
+                <CommandItem
+                  key="__use__"
+                  value={`__use__${search.trim()}`}
+                  onSelect={commitCustomValue}
+                  className="text-muted-foreground"
+                >
+                  Use &ldquo;{search.trim()}&rdquo;
+                </CommandItem>
+              ) : null}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
@@ -267,7 +292,9 @@ export function AsyncCombobox({
                       selected.has(option.value) ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  <span className="min-w-0 flex-1 break-words line-clamp-2">{option.label}</span>
+                  <span className="min-w-0 flex-1 break-words line-clamp-2">
+                    {option.label}
+                  </span>
                   {option.hint ? (
                     <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">
                       {option.hint}
@@ -281,18 +308,6 @@ export function AsyncCombobox({
               <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
                 <Loader2 aria-hidden className="size-4 animate-spin" />
                 Loading…
-              </div>
-            ) : null}
-
-            {allowCustomValue && search.trim() && options.length > 0 ? (
-              <div className="border-t border-border p-1">
-                <button
-                  type="button"
-                  onClick={commitCustomValue}
-                  className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent"
-                >
-                  Use &ldquo;{search.trim()}&rdquo; instead
-                </button>
               </div>
             ) : null}
           </CommandList>

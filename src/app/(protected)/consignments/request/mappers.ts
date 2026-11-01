@@ -57,7 +57,8 @@ function toCoordinate(value: unknown): number | undefined {
 
 /** The API sometimes returns `"Y "` with trailing space; trim before comparing. */
 function toYesNo(value: unknown, fallback: YesNo): YesNo {
-  const trimmed = typeof value === "string" ? value.trim().toUpperCase() : value;
+  const trimmed =
+    typeof value === "string" ? value.trim().toUpperCase() : value;
   return trimmed === "Y" || trimmed === "N" ? trimmed : fallback;
 }
 
@@ -81,7 +82,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /* -------------------------------------------------------------------------- */
 
 /** Also used on its own by the Update Sender dialog. */
-export function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInfo {
+export function toSenderInfo(
+  sender: ConsignmentFormValues["sender"],
+): SenderInfo {
   return {
     sender_first_name: sender.first_name,
     sender_last_name: sender.last_name,
@@ -98,6 +101,7 @@ export function toSenderInfo(sender: ConsignmentFormValues["sender"]): SenderInf
     sender_telephone: optional(sender.telephone),
     sender_telephone_ext: optional(sender.telephone_ext),
     sender_address_type: sender.address_type,
+    sender_save_address: sender.save_address,
   };
 }
 
@@ -121,6 +125,7 @@ export function toReceiverInfo(
     receiver_telephone: optional(receiver.telephone),
     receiver_telephone_ext: optional(receiver.telephone_ext),
     receiver_address_type: receiver.address_type,
+    receiver_save_address: receiver.save_address,
     receiver_latitude: receiver.latitude,
     receiver_longitude: receiver.longitude,
   };
@@ -160,7 +165,6 @@ function toBoxPayloads(boxes: ConsignmentFormValues["boxes"]): BoxPayload[] {
 /** The parts of the body that create and update word identically. */
 function toSharedPayload(data: ConsignmentFormValues) {
   return {
-    urgency: data.urgency,
     sender: toSenderInfo(data.sender),
     receiver: toReceiverInfo(data.receiver),
     boxes: toBoxPayloads(data.boxes),
@@ -286,15 +290,14 @@ export function mapDetailToFormValues(
         str(item.item_quantity_code) || newBoxDefaults.quantity_code,
       item_rate: toNumber(item.item_rate),
       item_total_amount: toNumber(item.item_total_amount),
-      item_currency: str(item.item_currency) || newBoxDefaults.declared_currency,
+      item_currency:
+        str(item.item_currency) || newBoxDefaults.declared_currency,
       item_currency_label:
         str(item.item_currency) || newBoxDefaults.declared_currency,
     })),
   }));
 
   return {
-    urgency: str(request.urgency),
-
     sender: {
       first_name: str(sender.sender_first_name),
       last_name: str(sender.sender_last_name),
@@ -312,6 +315,7 @@ export function mapDetailToFormValues(
       telephone_ext: str(sender.sender_telephone_ext),
       // Blank when the record has none — AddressFields then fills in meta's default.
       address_type: str(sender.sender_address_type),
+      save_address: toYesNo(sender.sender_save_address, "N"),
     },
 
     receiver: {
@@ -330,6 +334,7 @@ export function mapDetailToFormValues(
       telephone: str(receiver.receiver_telephone),
       telephone_ext: str(receiver.receiver_telephone_ext),
       address_type: str(receiver.receiver_address_type),
+      save_address: toYesNo(receiver.receiver_save_address, "N"),
       latitude: toCoordinate(receiver.receiver_latitude),
       longitude: toCoordinate(receiver.receiver_longitude),
     },

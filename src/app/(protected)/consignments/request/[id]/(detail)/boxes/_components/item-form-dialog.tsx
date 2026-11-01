@@ -40,6 +40,7 @@ export interface ItemFormDialogProps {
   boxId: number;
   /** Absent for a create. */
   itemId?: number;
+  receiverCountry?: string | null;
 }
 
 export function ItemFormDialog({
@@ -48,6 +49,7 @@ export function ItemFormDialog({
   consignmentId,
   boxId,
   itemId,
+  receiverCountry,
 }: ItemFormDialogProps) {
   const isEdit = itemId !== undefined;
 
@@ -155,6 +157,7 @@ export function ItemFormDialog({
               onChange={patch}
               errors={fieldErrors}
               disabled={saveItem.isPending}
+              receiverCountry={receiverCountry}
             />
 
             <DialogFooter>

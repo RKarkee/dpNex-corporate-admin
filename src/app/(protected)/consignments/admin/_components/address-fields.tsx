@@ -1,13 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Controller, useWatch, type FieldErrors, type Path } from "react-hook-form";
+import {
+  Controller,
+  useWatch,
+  type FieldErrors,
+  type Path,
+} from "react-hook-form";
 import {
   getCitiesOfState,
   getCountryByCode,
   getStatesOfCountry,
 } from "@countrystatecity/countries-browser";
 
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
 import { NativeSelect } from "@/shared/components/ui/native-select";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
@@ -83,15 +89,13 @@ export function AddressFields({
   };
 
   const cityValue = useWatch({ control, name: path("city") }) as
-    | string
-    | undefined;
+    string | undefined;
 
   // Address type — options and default both come from `/meta`
   // (`customer_address_type`).
   const { addressTypeOptions, addressTypeDefault } = useMetaOptions();
   const addressTypeValue = useWatch({ control, name: path("address_type") }) as
-    | string
-    | undefined;
+    string | undefined;
 
   // A stored type `/meta` no longer lists stays selectable, so an older record
   // does not open with a blank select.
@@ -99,7 +103,10 @@ export function AddressFields({
     () =>
       addressTypeValue &&
       !addressTypeOptions.some((option) => option.value === addressTypeValue)
-        ? [...addressTypeOptions, { value: addressTypeValue, label: addressTypeValue }]
+        ? [
+            ...addressTypeOptions,
+            { value: addressTypeValue, label: addressTypeValue },
+          ]
         : addressTypeOptions,
     [addressTypeOptions, addressTypeValue],
   );
@@ -161,8 +168,16 @@ export function AddressFields({
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
       // At most COORD_DECIMALS (3) places, cut not rounded: 45.34567 -> 45.345.
-      setValue("receiver.receiver_latitude", truncateDecimals(lat, COORD_DECIMALS), { shouldDirty: false });
-      setValue("receiver.receiver_longitude", truncateDecimals(lng, COORD_DECIMALS), { shouldDirty: false });
+      setValue(
+        "receiver.receiver_latitude",
+        truncateDecimals(lat, COORD_DECIMALS),
+        { shouldDirty: false },
+      );
+      setValue(
+        "receiver.receiver_longitude",
+        truncateDecimals(lng, COORD_DECIMALS),
+        { shouldDirty: false },
+      );
     })();
 
     return () => {
@@ -335,6 +350,30 @@ export function AddressFields({
                 onChange={(event) => field.onChange(event.target.value)}
                 onBlur={field.onBlur}
               />
+            )}
+          />
+        )}
+      </FieldShell>
+
+      <FieldShell label="Save address" hint="Add to the address book">
+        {({ id }) => (
+          <Controller
+            control={control}
+            name={path("save_address")}
+            render={({ field }) => (
+              <label
+                htmlFor={id}
+                className="flex h-11 items-center gap-2 text-sm text-muted-foreground"
+              >
+                <Checkbox
+                  id={id}
+                  checked={field.value === "Y"}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true ? "Y" : "N")
+                  }
+                />
+                Save this address for next time
+              </label>
             )}
           />
         )}

@@ -35,12 +35,14 @@ export interface ItemsSubTableProps {
   consignmentId: number | string;
   boxId: number;
   permissions: BoxPermissions;
+  receiverCountry?: string | null;
 }
 
 export function ItemsSubTable({
   consignmentId,
   boxId,
   permissions,
+  receiverCountry,
 }: ItemsSubTableProps) {
   const { genderOptions, quantityCodeOptions } = useMetaOptions();
 
@@ -100,7 +102,9 @@ export function ItemsSubTable({
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">HS code</TableHead>
               <TableHead className="hidden lg:table-cell">Material</TableHead>
-              <TableHead className="hidden xl:table-cell">Manufacturer</TableHead>
+              <TableHead className="hidden xl:table-cell">
+                Manufacturer
+              </TableHead>
               <TableHead className="hidden lg:table-cell">Gender</TableHead>
               <TableHead>Qty</TableHead>
               <TableHead className="hidden sm:table-cell">Rate</TableHead>
@@ -194,6 +198,7 @@ export function ItemsSubTable({
           consignmentId={consignmentId}
           boxId={boxId}
           itemId={dialog.itemId}
+          receiverCountry={receiverCountry}
         />
       ) : null}
 
