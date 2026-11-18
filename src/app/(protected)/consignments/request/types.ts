@@ -240,8 +240,11 @@ export interface CreateConsignmentRequestPayload {
  */
 export type UpdateConsignmentRequestPayload = Omit<
   CreateConsignmentRequestPayload,
-  "selected_rate"
->;
+  "selected_rate" | "service_code"
+> & {
+  /** Left out when the stored record has none — an edit never invents one. */
+  service_code?: string;
+};
 
 /* -------------------------------------------------------------------------- */
 /* Read shapes                                                                */

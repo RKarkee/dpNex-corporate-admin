@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Package, Plus, Trash2 } from "lucide-react";
+import { Loader2, Package, Plus } from "lucide-react";
 
 import { isApiError } from "@/shared/api/errors";
 import { AsyncCombobox } from "@/shared/components/ui/async-combobox";
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { FormRow, FormRows } from "@/shared/components/ui/form-rows";
 import { Input } from "@/shared/components/ui/input";
 import { WeightDimensionBanner } from "@/shared/components/ui/weight-dimension-banner";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
@@ -33,6 +34,7 @@ import type {
   WeightDimensionCheckResult,
 } from "../../../../types";
 import { FieldShell } from "../../../../_components/field-shell";
+import { ITEM_COLUMNS } from "../../../../_components/item-columns";
 import {
   currencyFetcher,
   hsCodeFetcher,
@@ -493,7 +495,11 @@ export function BoxFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        // Wider when creating, so the items it composes have room to show as a
+        // table; editing a box has no item rows here and keeps the narrow size.
+        className={isEdit ? "max-w-2xl" : "max-w-2xl lg:max-w-5xl"}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit box" : "Add box"}</DialogTitle>
         </DialogHeader>
@@ -841,39 +847,26 @@ export function BoxFormDialog({
                   </Button>
                 </div>
 
-                {items.map((row, index) => (
-                  <div
-                    key={row.localId}
-                    className="overflow-hidden rounded-xl border border-border"
-                  >
-                    <div className="flex items-center justify-between border-b border-border bg-secondary/50 px-4 py-2.5">
-                      <span className="text-sm font-medium text-foreground">
-                        Item {index + 1}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(row.localId)}
-                        disabled={saveBox.isPending}
-                        className="size-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="size-3.5" aria-hidden />
-                        <span className="sr-only">Remove item {index + 1}</span>
-                      </Button>
-                    </div>
-
-                    <div className="p-4">
+                <FormRows columns={ITEM_COLUMNS}>
+                  {items.map((row, index) => (
+                    <FormRow
+                      key={row.localId}
+                      title={`Item ${index + 1}`}
+                      onRemove={() => removeItem(row.localId)}
+                      removeLabel={`Remove item ${index + 1}`}
+                      disabled={saveBox.isPending}
+                    >
                       <ItemFields
+                        layout="row"
                         value={row.form}
                         onChange={(next) => patchItem(row.localId, next)}
                         errors={row.errors}
                         disabled={saveBox.isPending}
                         receiverCountry={shipmentContext?.receiver?.country}
                       />
-                    </div>
-                  </div>
-                ))}
+                    </FormRow>
+                  ))}
+                </FormRows>
               </section>
             )}
 

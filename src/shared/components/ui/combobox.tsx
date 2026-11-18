@@ -128,21 +128,24 @@ export function Combobox({
             onValueChange={setSearch}
           />
           <CommandList>
-            <CommandEmpty>
-              {allowCustomValue && search.trim() ? (
-                <button
-                  type="button"
-                  onClick={commitCustomValue}
-                  className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
-                >
-                  Use &ldquo;{search.trim()}&rdquo;
-                </button>
-              ) : (
-                emptyText
-              )}
-            </CommandEmpty>
+            {filtered.length === 0 && !(allowCustomValue && search.trim()) ? (
+              <CommandEmpty>{emptyText}</CommandEmpty>
+            ) : null}
 
             <CommandGroup>
+              {/* "Use …" sits at the top, as a real row, so the user never has
+                  to scroll past the whole list to reach it and the arrow keys
+                  and Enter reach it like any option. */}
+              {allowCustomValue && search.trim() ? (
+                <CommandItem
+                  key="__use__"
+                  value={`__use__${search.trim()}`}
+                  onSelect={commitCustomValue}
+                  className="text-muted-foreground"
+                >
+                  Use &ldquo;{search.trim()}&rdquo;
+                </CommandItem>
+              ) : null}
               {filtered.map((option) => (
                 <CommandItem
                   key={option.value}
@@ -163,20 +166,6 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
-
-            {/* The escape hatch when the typed text *does* match something but
-                the user meant it literally. */}
-            {allowCustomValue && search.trim() && filtered.length > 0 ? (
-              <div className="border-t border-border p-1">
-                <button
-                  type="button"
-                  onClick={commitCustomValue}
-                  className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent"
-                >
-                  Use &ldquo;{search.trim()}&rdquo; instead
-                </button>
-              </div>
-            ) : null}
           </CommandList>
         </Command>
       </PopoverContent>

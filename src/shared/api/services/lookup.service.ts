@@ -171,8 +171,38 @@ export function fetchMaterials(page: number, perPage: number, query?: string) {
   return fetchLookup(PATHS.materials, page, perPage, query, "q");
 }
 
+/**
+ * An HS code row as a *code*: `value` is the row's `hs_code`, never its
+ * database id.
+ *
+ * `toOption` would hand back `value` / `id` — the row's id (4, 5, 10…) — and
+ * that id would then be stored and sent as `hs_code` / `item_hs_code`, and
+ * shown in the field after picking. Every HS code picker, and the label
+ * resolver that reads this list, wants the code. A row without one falls back
+ * to `toOption` rather than being dropped, so an unexpected shape degrades to
+ * the old behaviour instead of an empty list.
+ */
+function toHsCodeOption(row: unknown): LookupOption | null {
+  if (!isRecord(row)) return toOption(row);
+
+  const code = typeof row.hs_code === "string" ? row.hs_code.trim() : "";
+  if (!code) return toOption(row);
+
+  const label = typeof row.label === "string" ? row.label.trim() : "";
+  return { value: code, label: label || code };
+}
+
 export function fetchHsCodes(page: number, perPage: number, query?: string) {
-  return fetchLookup(PATHS.hsCodes, page, perPage, query, "q");
+  return fetchLookup(
+    PATHS.hsCodes,
+    page,
+    perPage,
+    query,
+    "q",
+    undefined,
+    undefined,
+    toHsCodeOption,
+  );
 }
 
 /**

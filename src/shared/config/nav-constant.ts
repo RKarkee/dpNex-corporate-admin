@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Package,
+  PackageSearch,
   PiggyBank,
   Receipt,
   Shield,
@@ -43,6 +44,13 @@ export const sidebarNav: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Check Rate / Track",
+    href: "/rate-track",
+    icon: PackageSearch,
+    // Either tab is worth opening — see `rate-track/permissions.ts`.
+    anyPermission: ["view_rate", "track_consignment"],
   },
   {
     title: "Users",

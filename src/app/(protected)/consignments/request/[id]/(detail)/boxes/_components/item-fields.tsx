@@ -2,7 +2,9 @@
 
 import { AsyncCombobox } from "@/shared/components/ui/async-combobox";
 import { Combobox } from "@/shared/components/ui/combobox";
+import { FORM_ROW_PINNED_CELL } from "@/shared/components/ui/form-rows";
 import { Input } from "@/shared/components/ui/input";
+import { cn } from "@/shared/lib/utils";
 import { useLookupLabel } from "@/shared/hooks/use-lookup-label";
 import { useMetaOptions } from "@/shared/hooks/use-meta-options";
 import {
@@ -174,6 +176,12 @@ export interface ItemFieldsProps {
   disabled?: boolean;
   /** Destination country, sent with the restricted-item check. */
   receiverCountry?: string | null;
+  /**
+   * `stacked` (default): a self-contained two-column form, for the single-item
+   * dialog. `row`: just the cells, for a `FormRow` — a table row where there is
+   * room, a card where there is not.
+   */
+  layout?: "stacked" | "row";
 }
 
 export function ItemFields({
@@ -182,7 +190,9 @@ export function ItemFields({
   errors = {},
   disabled = false,
   receiverCountry,
+  layout = "stacked",
 }: ItemFieldsProps) {
+  const row = layout === "row";
   const { quantityCodeOptions, genderOptions } = useMetaOptions();
   const checkRestricted = useRestrictedItemCheck();
 
@@ -219,13 +229,16 @@ export function ItemFields({
     };
   };
 
-  return (
-    <div className="grid gap-5 sm:grid-cols-2">
+  const cells = (
+    <>
       <FieldShell
+        tableCell={row}
         label="Item name"
         required
         error={error("item_name")}
-        className="sm:col-span-2"
+        className={
+          row ? cn(FORM_ROW_PINNED_CELL, "@xl:col-span-2 @3xl:col-span-1") : "sm:col-span-2"
+        }
       >
         {() => (
           // Search-as-you-type over the HS code list. Picking a row fills the
@@ -256,7 +269,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="HS code" hint="Filled from the item — editable">
+      <FieldShell tableCell={row} label="HS code" hint="Filled from the item — editable">
         {() => (
           // Editable: filled when an item is picked, but the user can search
           // another code or type their own. Disabled until a name is entered.
@@ -286,7 +299,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Material" hint="Optional">
+      <FieldShell tableCell={row} label="Material" hint="Optional">
         {() => (
           <AsyncCombobox
             value={value.item_material}
@@ -306,7 +319,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Manufacturer" hint="Optional">
+      <FieldShell tableCell={row} label="Manufacturer" hint="Optional">
         {() => (
           <AsyncCombobox
             value={value.item_manufacturer}
@@ -328,7 +341,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Gender" hint="For apparel and footwear">
+      <FieldShell tableCell={row} label="Gender" hint="For apparel and footwear">
         {() => (
           <Combobox
             options={genderOptions}
@@ -342,7 +355,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Quantity" required error={error("quantity")}>
+      <FieldShell tableCell={row} label="Quantity" required error={error("quantity")}>
         {({ id, describedBy }) => (
           <Input
             id={id}
@@ -361,6 +374,7 @@ export function ItemFields({
       </FieldShell>
 
       <FieldShell
+        tableCell={row}
         label="Quantity code"
         required
         error={error("item_quantity_code")}
@@ -379,7 +393,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Rate" required error={error("item_rate")}>
+      <FieldShell tableCell={row} label="Rate" required error={error("item_rate")}>
         {({ id, describedBy }) => (
           <Input
             id={id}
@@ -398,6 +412,7 @@ export function ItemFields({
       </FieldShell>
 
       <FieldShell
+        tableCell={row}
         label="Total amount"
         required
         error={error("item_total_amount")}
@@ -419,7 +434,7 @@ export function ItemFields({
         )}
       </FieldShell>
 
-      <FieldShell label="Currency" required error={error("item_currency")}>
+      <FieldShell tableCell={row} label="Currency" required error={error("item_currency")}>
         {() => (
           <AsyncCombobox
             value={value.item_currency}
@@ -439,6 +454,8 @@ export function ItemFields({
           />
         )}
       </FieldShell>
-    </div>
+    </>
   );
+
+  return row ? cells : <div className="grid gap-5 sm:grid-cols-2">{cells}</div>;
 }

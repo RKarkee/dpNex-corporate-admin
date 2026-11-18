@@ -233,7 +233,9 @@ export function buildUpdatePayload(
     via_code: str(detail.via_code),
     integrator_code: str(detail.integrator_code),
     integrator_group_code: str(detail.integrator_group_code),
-    service_code: str(detail.service_code),
+    // A record saved without a service (service_code: null — e.g. one raised
+    // through the corporate portal) is sent without one, rather than as "".
+    ...(str(detail.service_code) ? { service_code: str(detail.service_code) } : {}),
     package_type: detail.package_type,
     ...toSharedPayload(data),
   };

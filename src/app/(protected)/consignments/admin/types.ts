@@ -231,8 +231,11 @@ export interface CreateConsignmentPayload {
 /** The `PUT` body — the full record minus the quote. */
 export type UpdateConsignmentPayload = Omit<
   CreateConsignmentPayload,
-  "selected_rate"
->;
+  "selected_rate" | "service_code"
+> & {
+  /** Left out when the stored record has none — an edit never invents one. */
+  service_code?: string;
+};
 
 /* -------------------------------------------------------------------------- */
 /* Read shapes                                                                */

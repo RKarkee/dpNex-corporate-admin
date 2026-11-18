@@ -9,6 +9,7 @@ import { isApiError } from "@/shared/api/errors";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { RemoteAddressBanner } from "@/shared/components/ui/remote-address-banner";
+import { toastFormErrors } from "@/shared/lib/form-error-summary";
 
 import {
   consignmentAdminFormSchema,
@@ -107,7 +108,9 @@ export function ConsignmentForm({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, toastFormErrors)} className="space-y-6">
+      {/* A blocked submit names every problem — where and what — rather than
+          leaving the user to find a highlighted field that may be off screen. */}
       <ShipmentDetailsFields
         control={control}
         register={register}

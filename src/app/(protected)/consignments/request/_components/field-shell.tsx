@@ -23,6 +23,12 @@ export interface FieldShellProps {
   error?: string;
   hint?: string;
   className?: string;
+  /**
+   * A cell of a `FormRows` table. At the table size the column header carries
+   * the label, so this one is hidden visually (kept for screen readers) along
+   * with the hint; at the card size it shows as usual.
+   */
+  tableCell?: boolean;
   /** Receives the id to hang `htmlFor` and `aria-describedby` off. */
   children: (ids: { id: string; describedBy?: string }) => React.ReactNode;
 }
@@ -33,6 +39,7 @@ export function FieldShell({
   error,
   hint,
   className,
+  tableCell = false,
   children,
 }: FieldShellProps) {
   // `useId` would be ideal, but a stable id is needed inside `useFieldArray`
@@ -42,8 +49,13 @@ export function FieldShell({
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between gap-2">
+    <div className={cn("space-y-2", tableCell && "@3xl:space-y-0", className)}>
+      <div
+        className={cn(
+          "flex items-center justify-between gap-2",
+          tableCell && "@3xl:sr-only",
+        )}
+      >
         <Label htmlFor={id}>{label}</Label>
         {/* `aria-hidden`: the control's own `required`/`aria-required` is what
             assistive tech announces, and a stray "star" per field is noise. */}
@@ -60,11 +72,18 @@ export function FieldShell({
       {children({ id, describedBy })}
 
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-xs text-destructive">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className={cn("text-xs text-destructive", tableCell && "@3xl:mt-1")}
+        >
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+        <p
+          id={`${id}-hint`}
+          className={cn("text-xs text-muted-foreground", tableCell && "@3xl:hidden")}
+        >
           {hint}
         </p>
       ) : null}

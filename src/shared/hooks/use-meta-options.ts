@@ -84,6 +84,13 @@ export interface MetaOptions {
   requestTaskCodeOptions: ComboboxOption[];
   /** Workflow tasks a consignment can be assigned — value is the `task_code`. */
   consignmentTaskCodeOptions: ComboboxOption[];
+  /** `consignment_tracking_type`: what a tracking number refers to — CONSIGNMENT, REQUEST. */
+  trackingTypeOptions: ComboboxOption[];
+  /** `consignment_tracking_entry`: how it was entered — SCAN, NORMAL. */
+  trackingEntryOptions: ComboboxOption[];
+  /** `/meta`'s own default for each, or `""` when it names none. */
+  trackingTypeDefault: string;
+  trackingEntryDefault: string;
   isPending: boolean;
 }
 
@@ -127,6 +134,10 @@ export function useMetaOptions(): MetaOptions {
         controls.consignment_task_codes?.values,
         "task_code",
       ),
+      trackingTypeOptions: toOptions(controls.consignment_tracking_type?.values),
+      trackingEntryOptions: toOptions(controls.consignment_tracking_entry?.values),
+      trackingTypeDefault: String(controls.consignment_tracking_type?.default ?? ""),
+      trackingEntryDefault: String(controls.consignment_tracking_entry?.default ?? ""),
       isPending,
     };
   }, [data, isPending]);

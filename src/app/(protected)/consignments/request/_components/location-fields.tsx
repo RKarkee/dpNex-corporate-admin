@@ -62,6 +62,12 @@ export interface LocationFieldsProps<T extends FieldValues> {
   cityError?: string;
   /** `contents` lets the three fields join the parent grid directly. */
   className?: string;
+  /**
+   * Drops the required marker from State and City; Country stays required.
+   * For a form that only needs a country — the standalone rate check — where
+   * marking the other two required would mislead.
+   */
+  optionalStateCity?: boolean;
 }
 
 export function LocationFields<T extends FieldValues>({
@@ -79,6 +85,7 @@ export function LocationFields<T extends FieldValues>({
   stateError,
   cityError,
   className,
+  optionalStateCity = false,
 }: LocationFieldsProps<T>) {
   const { options: countryOptions, loading: countriesLoading } =
     useCountryOptions();
@@ -191,7 +198,7 @@ export function LocationFields<T extends FieldValues>({
         )}
       </FieldShell>
 
-      <FieldShell label="State / Province" required error={stateError}>
+      <FieldShell label="State / Province" required={!optionalStateCity} error={stateError}>
         {() => (
           <Controller
             control={control}
@@ -220,7 +227,7 @@ export function LocationFields<T extends FieldValues>({
         )}
       </FieldShell>
 
-      <FieldShell label="City" required error={cityError}>
+      <FieldShell label="City" required={!optionalStateCity} error={cityError}>
         {() => (
           <Controller
             control={control}
